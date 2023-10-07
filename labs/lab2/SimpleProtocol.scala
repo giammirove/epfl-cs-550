@@ -3,8 +3,9 @@
 
 import stainless.lang.*
 import stainless.annotation.*
-import stainless.collection.*
-
+import stainless.collection._
+import stainless.collection.ListSpecs._
+import stainless.equations._
 
 trait Message
 
@@ -23,7 +24,7 @@ trait Message
   *    iteration and drop it otherwise
   */
 trait Network {
-  def hasSent(message: Message, seed: BigInt): Boolean
+  def hasSent(message: Message, seed: BigInt): Boolean 
 
   /**
     * Simulate iter iterations of a communication between a sender and a receiver.
@@ -48,7 +49,6 @@ trait Network {
       else
         messageExchange(sender, receiver, iter - 1)
     else (sender, receiver)
-
 }
 
 object Network{
@@ -115,7 +115,6 @@ object NetworkProperties {
   def receivedAllMsgCorrectly(sender: Endpoint, receiverBeforeExchange: Endpoint, receiverAfterExchange: Endpoint): Boolean =
     (receiverBeforeExchange.received ++ sender.toSend) == receiverAfterExchange.received
 
-
   /**
     * Correctness of the protocol: that is, if the sender has no more message to send then it means the receiver
     * received all of them.
@@ -130,9 +129,37 @@ object NetworkProperties {
     require(iter >= 0)
     require(!network.messageExchange(sender, receiver, iter)._1.msgQueued)
 
-    /* TODO: Prove me */
+    // Recursion invariant
+    // Recursion invariant : at each recursive call 
+    //  messageExchange(sender, receiver, iter) = (sender', receiver')
+    //  we have that receiver' ++ sender' == receiver ++ sender
+    // Base case : when iter = 0, 
+    //  messageExchange(sender, receiver, iter) = (sender, receiver)
+    //  it holds because -> sender = sender and receiver = receiver
+    // Maintenance : we can divide this into two cases : hasSent and !hasSent
 
-  }.ensuring(receivedAllMsgCorrectly(sender, receiver, network.messageExchange(sender, receiver, iter)._2))
+    if (sender.msgQueued && iter > 0) {
+      val m = sender.nextMsg
+
+      if (network.hasSent(m, iter)) {
+        messageExchangeCorrectness(network, sender.updated, receiver.receive(m), iter - 1)
+        (
+          receiver.receive(m).received ++ sender.toSend.tail              
+            ==:| 
+            appendAssoc(receiver.received, Cons(m, Nil()), 
+              sender.toSend.tail)                                           
+            |:
+          receiver.received ++ (Cons(m, Nil()) ++ sender.toSend.tail)
+        ).qed
+      }
+      else {
+        messageExchangeCorrectness(network, sender, receiver, iter - 1)
+      }
+    }
+
+  }.ensuring(
+    receivedAllMsgCorrectly(sender, receiver, 
+      network.messageExchange(sender, receiver, iter)._2))
 
   /**
     * For any network, if the receiver has received all the messages transmitted by the sender, then the number
@@ -143,8 +170,24 @@ object NetworkProperties {
     require(iter >= 0)
     require(receivedAllMsgCorrectly(sender, receiver, network.messageExchange(sender, receiver, iter)._2))
 
-    /* TODO: Prove me */
+    if (sender.msgQueued && iter > 0) {
+      val m = sender.nextMsg
 
+      if (network.hasSent(m, iter)) {
+        (
+          receiver.received ++ (Cons(m, Nil()) ++ sender.toSend.tail)
+            ==:| 
+            appendAssoc(receiver.received, Cons(m, Nil()), 
+              sender.toSend.tail)                                           
+            |:
+          receiver.receive(m).received ++ sender.toSend.tail              
+        ).qed
+        messageExchangeLowerBound(network, sender.updated, receiver.receive(m), iter - 1)
+      }
+      else {
+        messageExchangeLowerBound(network, sender, receiver, iter - 1)
+      }
+    }
   }.ensuring(iter >= sender.toSend.size)
 
 
@@ -156,7 +199,20 @@ object NetworkProperties {
     decreases(iter)
     require(iter >= sender.toSend.size)
 
-    /* TODO: Prove me */
+    if (sender.msgQueued && iter > 0) {
+      val m = sender.nextMsg
+
+      (
+        receiver.received ++ (Cons(m, Nil()) ++ sender.toSend.tail)
+          ==:| 
+          appendAssoc(receiver.received, Cons(m, Nil()), 
+            sender.toSend.tail)                                           
+          |:
+        receiver.receive(m).received ++ sender.toSend.tail              
+      ).qed
+      messageExchangeWithNoLoss(sender.updated, receiver.receive(m), iter - 1)
+    }
+       
 
   }.ensuring(
     receivedAllMsgCorrectly(sender, receiver, noLossNetwork.messageExchange(sender, receiver, iter)._2)
@@ -169,9 +225,11 @@ object NetworkProperties {
     require(iter >= 0)
     require(receivedAllMsgCorrectly(sender, receiver, network.messageExchange(sender, receiver, iter)._2))
 
-    /* TODO: Prove me */
+    messageExchangeLowerBound(network, sender, receiver, iter)
+    messageExchangeWithNoLoss(sender, receiver, iter)
 
-  }.ensuring(receivedAllMsgCorrectly(sender, receiver, noLossNetwork.messageExchange(sender, receiver, iter)._2)) 
+  }.ensuring(
+    receivedAllMsgCorrectly(sender, receiver, noLossNetwork.messageExchange(sender, receiver, iter)._2)) 
 
   /**
     * If a network does not transmit any packet, then no matter how many iterations of the protocol one runs, the 
@@ -181,7 +239,11 @@ object NetworkProperties {
     decreases(iter)
     require(iter >= 0)
 
-    /* TODO: Prove me */
+    if (sender.msgQueued && iter > 0) {
+      val m = sender.nextMsg
+
+      messageExchangeWithFullLosses(sender, receiver, iter - 1)
+    }
 
   }.ensuring(
     fullLossNetwork.messageExchange(sender, receiver, iter)
@@ -198,7 +260,7 @@ object NetworkProperties {
     require(iter >= 0)
     require(receivedAllMsgCorrectly(sender, receiver, fullLossNetwork.messageExchange(sender, receiver, iter)._2))
 
-    /* TODO: Prove me */
+    messageExchangeWithFullLosses(sender, receiver, iter)
 
   }.ensuring(!sender.msgQueued)
 
@@ -215,7 +277,17 @@ object NetworkProperties {
     require(iter >= 0)
     require(n > 0)
 
-    /* TODO: Prove me */
+    if (sender.msgQueued && iter > 0) {
+      val m = sender.nextMsg
+
+      if (badButPredictableNetwork(n).hasSent(m, iter)) {
+        messageExchangeBadNetwork(sender.updated, receiver.receive(m), iter - 1, n)
+      }
+      else {
+        modMinusOne(iter, n)
+        messageExchangeBadNetwork(sender, receiver, iter - 1, n)
+      }
+    }
 
   }.ensuring(
     badButPredictableNetwork(n).messageExchange(sender, receiver, iter)
