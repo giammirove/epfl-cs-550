@@ -74,6 +74,7 @@ object Resolution {
    * Put the formula in Negation Normal Form.
    */
   def negationNormalForm(f: Formula): Formula = {
+    decreases(f)
     f match {
       case Predicate(_, _) => f
       case And(l, r)       => And(negationNormalForm(l), negationNormalForm(r))
@@ -98,6 +99,9 @@ object Resolution {
   }.ensuring(res => res.isNNF)
 
   def skolemRec(f: Formula, subst: Map[Identifier, Term]): Formula = {
+    decreases(f)
+    require(f.isNNF)
+
     f match {
       case Predicate(id, children) =>
         Predicate(id, children.map(_.substitute(subst)))
@@ -126,13 +130,17 @@ object Resolution {
   }.ensuring(res => res.isNNF && res.containsNoExistential)
 
   def prenexRec(f: Formula): Formula = {
+    decreases(f)
+    require(f.isNNF && f.containsNoExistential)
+
     f match {
       case Predicate(_, _)     => f
       case And(l, r)           => And(prenexRec(l), prenexRec(r))
       case Or(l, r)            => Or(prenexRec(l), prenexRec(r))
-      case Implies(l, r)       => Implies(prenexRec(l), prenexRec(r))
+      case Implies(l, r)       => Or(prenexRec(Neg(l)), prenexRec(r))
       case Neg(in)             => Neg(prenexRec(in))
       case Forall(Var(id), in) => prenexRec(in)
+      case Exists(Var(id), in) => prenexRec(in)
     }
   }.ensuring(res =>
     res.isNNF && res.containsNoUniversal && res.containsNoExistential
@@ -151,6 +159,7 @@ object Resolution {
   )
 
   def cnfRec(f: Formula): Formula = {
+    decreases(f)
     f match {
       case Or(And(li, ri), r) => And(cnfRec(Or(li, r)), cnfRec(Or(ri, r)))
       case Or(l, And(li, ri)) => And(cnfRec(Or(l, li)), cnfRec(Or(l, ri)))
@@ -160,21 +169,41 @@ object Resolution {
       case And(l, r)       => And(cnfRec(l), cnfRec(r))
       case Implies(l, r)   => Implies(cnfRec(l), cnfRec(r))
       case Neg(in)         => Neg(cnfRec(in))
+
+      case Forall(Var(id), in) => Forall(Var(id), cnfRec(in))
+      case Exists(Var(id), in) => Exists(Var(id), cnfRec(in))
     }
   }
 
   def toClause(f: Formula, ll: Clause): Clause = {
+    decreases(f)
     f match {
-      case Predicate(_, _) | Neg(Predicate(_, _)) => ll :+ Literal(f)
-      case Or(l, r) => toClause(l, ll) ++ toClause(r, ll)
+      case Predicate(_, _) => ll :+ Literal(f)
+      case Or(l, r)        => toClause(l, ll) ++ toClause(r, ll)
+
+      case And(l, r)           => toClause(l, ll) ++ toClause(r, ll)
+      case Implies(l, r)       => toClause(l, ll) ++ toClause(r, ll)
+      case Neg(in)             => toClause(in, ll)
+      case Forall(Var(id), in) => toClause(in, ll)
+      case Exists(Var(id), in) => toClause(in, ll)
     }
   }
 
   def toCnfList(f: Formula, ll: List[Clause]): List[Clause] = {
+    decreases(f)
     f match {
-      case Predicate(_, _) | Neg(Predicate(_, _)) | Or(_, _) =>
+      case Predicate(_, _) =>
+        ll :+ toClause(f, List())
+      case Neg(Predicate(_, _)) =>
+        ll :+ toClause(f, List())
+      case Or(_, _) =>
         ll :+ toClause(f, List())
       case And(l, r) => toCnfList(l, ll) ++ toCnfList(r, ll)
+
+      case Implies(l, r)       => toCnfList(l, ll) ++ toCnfList(r, ll)
+      case Neg(in)             => toCnfList(in, ll)
+      case Forall(Var(id), in) => toCnfList(in, ll)
+      case Exists(Var(id), in) => toCnfList(in, ll)
     }
   }
 
@@ -220,6 +249,13 @@ object Resolution {
     }
   }
 
+  def isAssumed(j: Justification): Boolean = {
+    j match {
+      case Assumed => true
+      case _       => false
+    }
+  }
+
   /** Verify that [[proof]] is a valid proof, i.e. that every clause is
     * correctly justified (unless assumed). It is quite easy to miss some corner
     * cases. We thus recommend that you:
@@ -241,6 +277,27 @@ object Resolution {
     *   def mkErrorMessage = s"This is an error at step ${k}"
     *   Invalid(mkErrorMessage)
     */
+
+  def checkDeduced(
+      c: Clause,
+      premises: (BigInt, BigInt),
+      subst: Map[Identifier, Term],
+      proof: ResolutionProof
+  ): Boolean = {
+    require(
+      premises._1 >= 0 && premises._2 >= 0 && premises._1 < proof.size && premises._2 < proof.size
+    )
+    val pf1 = proof.apply(premises._1)
+    val pf2 = proof.apply(premises._1)
+    val fst = pf1._1.map(_.substitute(subst))
+    val snd = pf2._1.map(_.substitute(subst))
+    val fstf = fst.filter(e => !snd.contains(e.negation))
+    val sndf = snd.filter(e => !fst.contains(e.negation))
+    val u = fstf ++ sndf
+    var r = c.filter(u.contains(_))
+    r.size == c.size
+  }
+
   def checkClause(
       c: Clause,
       j: Justification,
@@ -248,16 +305,13 @@ object Resolution {
   ): Boolean = {
     j match {
       case Assumed => true
-      case Deduced((n1, n2), subst) => {
-        val pf1 = proof.apply(n1)
-        val pf2 = proof.apply(n2)
-        val fst = pf1._1.map(_.substitute(subst))
-        val snd = pf2._1.map(_.substitute(subst))
-        val fstf = fst.filter(e => !snd.contains(e.negation))
-        val sndf = snd.filter(e => !fst.contains(e.negation))
-        val u = fstf ++ sndf
-        var r = c.filter(u.contains(_))
-        r.size == c.size
+      case Deduced(prem, subst) => {
+        if (
+          prem._1 >= 0 && prem._2 >= 0 && prem._1 < proof.size && prem._2 < proof.size
+        )
+          checkDeduced(c, prem, subst, proof)
+        else
+          false
       }
     }
   }
@@ -268,9 +322,10 @@ object Resolution {
         Valid
       }
       case _ => {
-        val r = proof.filter((c, j) => !checkClause(c, j, proof))
+        val r =
+          proof.filter((c, j) => !checkClause(c, j, proof))
         if (!r.isEmpty)
-          Invalid(r.head._1.toString())
+          Invalid("meh")
         else
           Valid
       }
@@ -304,7 +359,7 @@ object Resolution {
     def charlesInnocent: ResolutionProof = {
       List(
         (
-          List(Literal(Neg(killedp(c, a)))),
+          List(killed(c, a).negation),
           Deduced((6, 8), Map(id(2) -> c, id(3) -> a, id(4) -> a))
         )
       )
@@ -321,7 +376,7 @@ object Resolution {
     def agathaKilledAgatha(k: BigInt): ResolutionProof = {
       List(
         (
-          List(Literal(killedp(a, a))),
+          List(killed(a, a)),
           Deduced((17, 15), Map(id(15) -> b, id(16) -> a, id(14) -> a))
         )
       )
