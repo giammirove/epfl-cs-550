@@ -179,7 +179,7 @@ object Resolution {
     f match {
       case Predicate(_, _)      => ll :+ Literal(f)
       case Neg(Predicate(_, _)) => ll :+ Literal(f)
-      case Or(l, r)             => toClause(l, ll) ++ toClause(r, ll)
+      case Or(l, r)             => toClause(l, ll) ++ toClause(r, Nil())
       case _                    => ll // cant happend
     }
   }
@@ -192,7 +192,7 @@ object Resolution {
       case Neg(Predicate(_, _)) => ll :+ toClause(f, List())
       case Or(_, _) =>
         ll :+ toClause(f, List())
-      case And(l, r) => toCnfList(l, ll) ++ toCnfList(r, ll)
+      case And(l, r) => toCnfList(l, ll) ++ toCnfList(r, Nil())
       case _         => ll // cant happend
     }
   }
