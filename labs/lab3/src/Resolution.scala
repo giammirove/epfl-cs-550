@@ -5,6 +5,7 @@ import stainless.lang.Map.ToMapOps
 
 import Utils.*
 import Formulas.*
+import scala.io.Source
 
 object Resolution {
 
@@ -271,13 +272,16 @@ object Resolution {
     )
     val pf1 = proof.apply(premises._1)
     val pf2 = proof.apply(premises._2)
+
     val fst = pf1._1.map(_.substitute(subst))
     val snd = pf2._1.map(_.substitute(subst))
+
     val fstf = fst.filter(e => !snd.contains(e.negation))
     val sndf = snd.filter(e => !fst.contains(e.negation))
+
     val u = fstf ++ sndf
-    var r = c.filter(u.contains(_))
-    r.size == c.size
+    val r = u.filter(e => c.contains(e))
+    (r.size == u.size)
   }
 
   def checkClause(
@@ -341,8 +345,16 @@ object Resolution {
     def charlesInnocent: ResolutionProof = {
       List(
         (
+          List(Literal(hatesp(a, a))),
+          Deduced((10, 15), Map(id(6) -> a))
+        ),
+        (
+          List(Literal(Neg(hatesp(c, a)))),
+          Deduced((8, 21), Map(id(4) -> a))
+        ),
+        (
           List(Literal(Neg(killedp(c, a)))),
-          Deduced((6, 8), Map(id(2) -> c, id(3) -> a, id(4) -> a))
+          Deduced((6, 22), Map(id(2) -> c, id(3) -> a))
         )
       )
     }
@@ -358,8 +370,12 @@ object Resolution {
     def agathaKilledAgatha(k: BigInt): ResolutionProof = {
       List(
         (
+          List(Literal(eqvp(killer, a))),
+          Deduced((26, 34), Map())
+        ),
+        (
           List(Literal(killedp(a, a))),
-          Deduced((17, 15), Map(id(15) -> b, id(16) -> a, id(14) -> a))
+          Deduced((24, 35), Map(id(16) -> a))
         )
       )
     }

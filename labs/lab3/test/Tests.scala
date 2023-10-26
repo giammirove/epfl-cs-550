@@ -95,7 +95,7 @@ class Tests extends FunSuite {
 
   // Unique names
 
-  test("Unique names - name re-use".only) {
+  test("Unique names - name re-use") {
     val f = And(Exists(x, p1(x)), Exists(x, p1(x)))
     val uf = makeVariableNamesUnique(f)
     assertEquals(
@@ -104,7 +104,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Unique names - free variable".only) {
+  test("Unique names - free variable") {
     val f = And(Exists(x, p1(y)), Exists(x, p1(x)))
     val uf = makeVariableNamesUnique(f)
     assertEquals(
@@ -113,7 +113,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Unique names - nested identical bindings".only) {
+  test("Unique names - nested identical bindings") {
     val f = Exists(x, And(p1(x), Forall(x, p1(x))))
     val uf = makeVariableNamesUnique(f)
     assertEquals(
@@ -122,7 +122,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Unique names - all variables become synthetic".only) {
+  test("Unique names - all variables become synthetic") {
     val f = And(p1(x), Exists(y, p1(y)))
     val uf = makeVariableNamesUnique(f)
     val fv = uf.freeVariables
@@ -142,7 +142,7 @@ class Tests extends FunSuite {
     }
   }
 
-  test("Unique names - running example".only) {
+  test("Unique names - running example") {
     assertEquals(
       makeVariableNamesUnique(runningExample),
       Neg(
@@ -165,7 +165,7 @@ class Tests extends FunSuite {
 
   // Negation normal form
 
-  test("NNF - basic".only) {
+  test("NNF - basic") {
     val f = Neg(Implies(p1(x), p1(y)))
     val nnf = negationNormalForm(f)
     assertEquals(
@@ -174,7 +174,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("NNF - running example".only) {
+  test("NNF - running example") {
     assertEquals(
       makeVariableNamesUnique(negationNormalForm(runningExample)),
       And(
@@ -195,7 +195,7 @@ class Tests extends FunSuite {
 
   // Skolemization
 
-  test("Skolemization - basic".only) {
+  test("Skolemization - basic") {
     val formula = Forall(x, Exists(y, And(p1(x), p1(y))))
     val skolemized = skolemizationNegation(formula)
     assertEquals(
@@ -204,7 +204,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Skolemization - running example".only) {
+  test("Skolemization - running example") {
     val skolemized = skolemizationNegation(runningExample)
     assertEquals(
       skolemized,
@@ -226,7 +226,7 @@ class Tests extends FunSuite {
 
   // Prenex
 
-  test("Prenex - basic".only) {
+  test("Prenex - basic") {
     val f = Forall(x, p1(x))
     val matrix = prenexSkolemizationNegation(f)
     assertEquals(
@@ -235,7 +235,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Prenex - running example".only) {
+  test("Prenex - running example") {
     val matrix = prenexSkolemizationNegation(runningExample)
     assertEquals(
       matrix,
@@ -254,7 +254,7 @@ class Tests extends FunSuite {
 
   // CNF
 
-  test("CNF - basic".only) {
+  test("CNF - basic") {
     val f = universallyQuantified(And(Or(p1(x), q1(y)), Or(p1(u), q1(v))))
     val cnf = conjunctionPrenexSkolemizationNegation(f)
     assertEquals(
@@ -263,7 +263,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("CNF - running example".only) {
+  test("CNF - running example") {
     assertEquals(
       conjunctionPrenexSkolemizationNegation(runningExample),
       List(
@@ -373,7 +373,7 @@ class Tests extends FunSuite {
     )
   }
 
-  test("Mansion mystery - Conclusion".only) {
+  test("Mansion mystery - Conclusion") {
     val proof = Mansion.fullProof
     assertEquals(checkResolutionProof(proof), Valid)
     assertEquals(
