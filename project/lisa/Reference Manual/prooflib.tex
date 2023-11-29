@@ -1,0 +1,51 @@
+\chapter{Developping Mathematics with Prooflib}
+\label{chapt:prooflib}
+LISA's kernel offers all the necessary tools to develops proofs, but  reading and writing proofs written directly in its language is cumbersome. 
+To develop and maintain a library of mathematical development, LISA offers a dedicate interface and DSL to write proofs: Prooflib
+LISA provides a canonical way of writing and organizing Kernel proofs by mean of a set of utilities and a DSL made possible by some of Scala 3's features.
+\autoref{fig:theoryFileExample} is a reminder from \autoref{chapt:quickguide} of the canonical way to write a theory file in LISA.
+
+\begin{figure}
+\begin{lstlisting}[language=lisa, frame=single]
+object MyTheoryName extends lisa.Main {
+  val x = variable
+  val f = function[1]
+  val P = predicate[1]
+
+  val fixedPointDoubleApplication = Theorem( 
+    ∀(x, P(x) ==> P(f(x))) |- P(x) ==> P(f(f(x)))
+  ) {
+    assume(∀(x, P(x) ==> P(f(x))))
+    val step1 = have(P(x) ==> P(f(x))) by InstantiateForall
+    val step2 = have(P(f(x)) ==> P(f(f(x)))) by InstantiateForall
+    have(thesis) by Tautology.from(step1, step2)
+  } 
+
+
+  val emptySetIsASubset = Theorem(
+    ∅ ⊆ x
+  ) {
+    have((y ∈ ∅) ==> (y ∈ x)) by Tautology.from(
+                            emptySetAxiom of (x := y))
+    val rhs = thenHave (∀(y, (y ∈ ∅) ==> (y ∈ x))) by RightForall
+    have(thesis) by Tautology.from(
+                            subsetAxiom of (x := ∅, y := x), rhs)
+  }
+
+}
+\end{lstlisting}
+\caption{An example of a theory file in LISA}
+\label{fig:theoryFileExample}
+\end{figure}
+
+In this chapter, we will describe how each of these construct is made possible and how they translate to statements in the Kernel.
+
+\section*{WIP}
+
+%It is important to note that when multiple such files are developed, they all use the same underlying \lstinline|RunningTheory|{}. This makes it possible to use results proved previously by means of a simple \lstinline|import|{} statement as one would import a regular object. Similarly, one should also import as usual automation and tactics developed alongside. It is expected in the medium term that \lstinline|lisa.Main|{} will come with basic automation.
+%All imported theory objects will be run through as well, but only the result of the selected one will be printed.
+
+
+
+
+

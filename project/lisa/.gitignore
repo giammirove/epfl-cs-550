@@ -1,0 +1,18 @@
+# IDEs
+.idea
+.metals
+.vscode
+project/metals.sbt
+
+# build-related
+.bsp
+.bloop
+target
+*.scala.semanticdb
+
+*.iml
+
+# silex and scallion
+
+silex/*
+scallion/*
