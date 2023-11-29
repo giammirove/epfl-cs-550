@@ -1,6 +1,8 @@
 package lisa.mathematics
 package settheory
 
+import lisa.mathematics.settheory.SetTheory.setIntersection
+
 object AxiomOfChoice extends lisa.Main {
   // export everything in this package
 
@@ -10,7 +12,17 @@ object AxiomOfChoice extends lisa.Main {
   private val x = variable
   private val y = variable
 
+  private val A = variable
+
   val pairwiseDisjoint = DEF(A) --> {
-    forall(x, forall(y, in(x, A) /\ in(y, A)))
+    forall(
+      x,
+      forall(
+        y,
+        in(x, A) /\ in(y, A) ==>
+          ((!(setIntersection(x, y) === emptySet)) ==> (x === y))
+      )
+    )
   }
+
 }
