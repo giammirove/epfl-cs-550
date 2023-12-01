@@ -379,7 +379,7 @@ object SetTheory extends lisa.Main {
   /**
    * Theorem --- If a set is a subset of the empty set, it is empty.
    *
-   *    `x ⊆ ∅ <=> a = ∅`
+   *    `x ⊆ ∅ <=> x = ∅`
    */
   val emptySetIsItsOwnOnlySubset = Theorem(
     subset(x, emptySet) <=> (x === emptySet)
@@ -2457,8 +2457,7 @@ object SetTheory extends lisa.Main {
    * Function application --- denoted `f(x)`. The unique element `z` such that
    * `(x, z) ∈ f` if it exists and `f` is functional, [[emptySet]] otherwise.
    */
-  val app =
-    DEF(f, x) --> The(z, ((functional(f) /\ in(x, relationDomain(f))) ==> in(pair(x, z), f)) /\ ((!functional(f) \/ !in(x, relationDomain(f))) ==> (z === ∅)))(functionApplicationUniqueness)
+  val app = DEF(f, x) --> The(z, ((functional(f) /\ in(x, relationDomain(f))) ==> in(pair(x, z), f)) /\ ((!functional(f) \/ !in(x, relationDomain(f))) ==> (z === ∅)))(functionApplicationUniqueness)
 
   val pairInFunctionIsApp = Theorem(
     functional(f) /\ in(a, relationDomain(f)) |- in(pair(a, b), f) <=> (app(f, a) === b)

@@ -4,7 +4,7 @@ import lisa.fol.FOL.{_, given}
 import lisa.utils.K
 import lisa.utils.K.makeAxiom
 import lisa.mathematics.settheory.AxiomOfChoice.pairwiseDisjoint
-// import lisa.mathematics.settheory.AxiomOfChoice.PiId
+import lisa.mathematics.settheory.AxiomOfChoice.identityFunction
 import lisa.mathematics.settheory.SetTheory.setIntersection
 import lisa.mathematics.settheory.SetTheory.singleton
 import lisa.mathematics.settheory.SetTheory.Pi
@@ -19,8 +19,6 @@ private[settheory] trait SetTheoryZFCAxioms extends SetTheoryZFAxioms {
   private val A = variable
   private val B = variable
   private val C = variable
-
-  final val identiy = ConstantFunctionLabel("identity", 1)
 
   /*
    *
@@ -39,7 +37,7 @@ private[settheory] trait SetTheoryZFCAxioms extends SetTheoryZFAxioms {
    */
 
   // "AC1 ≡ ∀A. 0∉A ⟶ (∃f. f ∈ (∏X ∈ A. X))"
-  final val AC1: AXIOM = Axiom(
+  final val ac1: this.AXIOM = Axiom(
     "ac1",
     // TODO: check Pi(A, A)
     //       my guess is that since A is like {(x,x), (y,y), ...}, if you
@@ -47,13 +45,13 @@ private[settheory] trait SetTheoryZFCAxioms extends SetTheoryZFAxioms {
     //       as a relation (set of pairs), but in Isabelle they use
     //       lambda function to express \x in A. x, that it is the identity
     //       function restricted to A
-    forall(A, !in(emptySet, A) ==> (exists(f, in(f, Pi(A, A)))))
+    forall(A, !in(emptySet, A) ==> (exists(f, in(f, Pi(A, identityFunction(A))))))
   )
 
   // "AC2 ≡ ∀A. 0∉A ∧ pairwise_disjoint(A)
   //                  ⟶ (∃C. ∀B ∈ A. ∃y. B ∩ C = {y})"
   // [[https://isabelle.in.tum.de/dist/library/FOL/ZF-AC/AC_Equiv.html#AC2]]
-  final val AC2: AXIOM = Axiom(
+  final val ac2: this.AXIOM = Axiom(
     "ac2",
     forall(
       A,
@@ -61,7 +59,11 @@ private[settheory] trait SetTheoryZFCAxioms extends SetTheoryZFAxioms {
         exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))
     )
   )
+  private val acAxioms: Set[(String, AXIOM)] = Set(
+    ("ac1", ac2),
+    ("ac2", ac2)
+  )
 
-  override def axioms: Set[(String, AXIOM)] = super.axioms + (("ac1", AC1)) + (("ac2", AC2))
+  override def axioms: Set[(String, AXIOM)] = super.axioms ++ acAxioms
 
 }
