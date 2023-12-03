@@ -294,7 +294,7 @@ object AxiomOfChoice extends lisa.Main {
 // lemma AC1_AC2_aux2:
 //         "⟦pairwise_disjoint(A); B ∈ A; C ∈ A; D ∈ B; D ∈ C⟧ ⟹ f`B = f`C"
 // there is just one sorry in this proof related to setIntersectionMembership
-  val AC1_AC2_axu2 = Lemma((pairwiseDisjoint(A), in(B, A), in(C, A), in(D, B), in(D, C), functional(f)) |- app(f, B) === app(f, C)) {
+  val AC1_AC2_aux2 = Lemma((pairwiseDisjoint(A), in(B, A), in(C, A), in(D, B), in(D, C), functional(f)) |- app(f, B) === app(f, C)) {
 
     assume(pairwiseDisjoint(A))
     assume(in(B, A))
