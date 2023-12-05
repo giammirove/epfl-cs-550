@@ -26,6 +26,7 @@ import lisa.mathematics.settheory.SetTheory.Pi
 import lisa.mathematics.settheory.SetTheory.piUniqueness
 import lisa.mathematics.settheory.SetTheory.app
 import lisa.mathematics.settheory.SetTheory.relation
+import lisa.mathematics.settheory.SetTheory.relationBetween
 import lisa.mathematics.settheory.SetTheory.cartesianProduct
 
 object AxiomOfChoice extends lisa.Main {
@@ -68,20 +69,39 @@ object AxiomOfChoice extends lisa.Main {
   val apply = DEF(f, a) --> union(image(f, singleton(a)))
 
   val identityFunctionUniqueness = Theorem(
-    ∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ existsOne(y, t === pair(y, y))))
+    ∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ existsOne(y, in(y, x) /\ (t === pair(y, y)))))
   ) {
-    have(∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ existsOne(y, t === pair(y, y))))) by UniqueComprehension(
+    have(∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ existsOne(y, in(y, x) /\ (t === pair(y, y)))))) by UniqueComprehension(
       cartesianProduct(x, x),
-      lambda((t, b), existsOne(y, t === pair(y, y)))
+      lambda((t, b), existsOne(y, in(y, x) /\ (t === pair(y, y))))
     )
   }
   // builds the identity function as set of pairs like pair(pair(x,x), pair(x,x))
   // TODO: not sure about existsOne
-  val identityFunction = DEF(x) --> The(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ ∃!(y, t === pair(y, y))))(identityFunctionUniqueness)
+  //val identityFunction = DEF(x) --> The(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ ∃!(y, t === pair(y, y))))(identityFunctionUniqueness)
+  val identityFunction = DEF(x) --> The(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ ∃!(y, in(y, x) /\ (t === pair(y, y)))))(identityFunctionUniqueness)
 
   // this could be hard
   // see `pairSingletonIsFunctional`
   val identityFunctionIsFunctional = Theorem(functional(identityFunction(A))) {
+
+    var id = identityFunction(A)
+
+    var rel = have(relation(id)) subproof {
+      have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ existsOne(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(
+        identityFunction.definition of (x -> A),
+      )
+      thenHave(forall(t, in(t, id) ==> in(t, cartesianProduct(A, A)))) by Tautology
+      have(relationBetween(id, A, A)) by Tautology.from(
+        lastStep,
+        subsetAxiom of (x -> id, y -> cartesianProduct(A, A)),
+        relationBetween.definition of (r -> id, a -> A, b -> A)
+      )
+      thenHave(exists(b, relationBetween(id, A, b))) by RightExists
+      thenHave(exists(a, exists(b, relationBetween(id, a, b)))) by RightExists
+      have(thesis) by Tautology.from(lastStep, relation.definition of r -> id)
+    }
+
     sorry
   }
 
