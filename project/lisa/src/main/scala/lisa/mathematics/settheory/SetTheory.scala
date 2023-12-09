@@ -144,7 +144,7 @@ object SetTheory extends lisa.Main {
   def singleton(x: Term) = unorderedPair(x, x)
 
   /**
-   * Ordered Pair --- `(x, y)`. Shorthand for `{{x}, {x, y}}`.
+   * Ordered Pair --- `(x, y)`. Shorthand for `{{x, y},{x}}`.
    *
    * @param x set
    * @param y set

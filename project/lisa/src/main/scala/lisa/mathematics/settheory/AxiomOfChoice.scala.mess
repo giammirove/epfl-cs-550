@@ -34,10 +34,8 @@ import lisa.mathematics.settheory.SetTheory.piUniqueness
 import lisa.mathematics.settheory.SetTheory.app
 import lisa.mathematics.settheory.SetTheory.pairInFunctionIsApp
 import lisa.mathematics.settheory.SetTheory.relation
-import lisa.mathematics.settheory.SetTheory.relationBetween
 import lisa.mathematics.settheory.SetTheory.cartesianProduct
 import lisa.mathematics.settheory.SetTheory.setWithElementNonEmpty
-import lisa.mathematics.settheory.SetTheory.subsetEqualitySymmetry
 
 object AxiomOfChoice extends lisa.Main {
   // export everything in this package
@@ -111,24 +109,6 @@ object AxiomOfChoice extends lisa.Main {
   // this could be hard
   // see `pairSingletonIsFunctional`
   val identityFunctionIsFunctional = Theorem(functional(identityFunction(A))) {
-
-    var id = identityFunction(A)
-
-    var rel = have(relation(id)) subproof {
-      have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ existsOne(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(
-        identityFunction.definition of (x -> A),
-      )
-      thenHave(forall(t, in(t, id) ==> in(t, cartesianProduct(A, A)))) by Tautology
-      have(relationBetween(id, A, A)) by Tautology.from(
-        lastStep,
-        subsetAxiom of (x -> id, y -> cartesianProduct(A, A)),
-        relationBetween.definition of (r -> id, a -> A, b -> A)
-      )
-      thenHave(exists(b, relationBetween(id, A, b))) by RightExists
-      thenHave(exists(a, exists(b, relationBetween(id, a, b)))) by RightExists
-      have(thesis) by Tautology.from(lastStep, relation.definition of r -> id)
-    }
-
     sorry
   }
 
@@ -483,17 +463,11 @@ object AxiomOfChoice extends lisa.Main {
     sorry
   }
 
-  val notInFunction = Lemma(
-    in(f, Pi(A, identityFunction(A))) /\ !in(emptySet, A) /\ in(B, A) /\ !in(pair(B, x), f)
-      |- !in(B, relationDomain(f)) \/ !in(x, relationRange(f))
-  ) {
-    // prove !in(pair(B,x), f) |- !in(B,relationDomain(f))
-
-    // prove !in(pair(B,x), f) |- !in(x,relationRange(f))
+  val notInFunction = Lemma(functional(f) /\ !in(pair(B, x), f) |- !in(B, relationDomain(f)) \/ !in(x, relationRange(f))) {
     sorry
   }
 
-  val intersectionInSingleton = Lemma(
+  val m2 = Lemma(
     in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
       |- in(x, setIntersection(B, relationRange(f))) ==> in(x, singleton(app(f, B)))
   ) {
@@ -502,7 +476,6 @@ object AxiomOfChoice extends lisa.Main {
     assume(!in(x, singleton(app(f, B))))
     assume(in(f, Pi(A, identityFunction(A))))
     assume(!in(emptySet, A))
-    assume(in(B, A))
 
     // -------------------------------------------------------------------------------------------------------
     // Preliminaries
@@ -527,6 +500,7 @@ object AxiomOfChoice extends lisa.Main {
     // --------------------------------------------------------------------------------------------------------
 
     val s1 = have(!(x === app(f, B))) by Tautology.from(singletonHasNoExtraElements of (y -> x, x -> app(f, B)))
+    // ==> (B,x) \not\in f
 
     have(functional(f) /\ in(B, relationDomain(f)) |- in(pair(B, x), f) <=> (app(f, B) === x)) by Tautology.from(pairInFunctionIsApp of (a -> B, b -> x))
     thenHave(functional(f) /\ in(B, relationDomain(f)) |- !in(pair(B, x), f) <=> !(app(f, B) === x)) by Tautology
@@ -535,26 +509,224 @@ object AxiomOfChoice extends lisa.Main {
     have(!in(x, relationRange(f))) by Tautology.from(bInDomain, lastStep)
     have(in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A) |- ()) by Tautology.from(xInRange, lastStep)
     thenHave(in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A) |- in(x, singleton(app(f, B)))) by Weakening
+
+    // val appDef = have(
+    //   (app(f, B) === x) <=>
+    //     (((functional(f) /\ in(B, relationDomain(f))) ==> in(pair(B, x), f))
+    //       /\ ((!functional(f) \/ !in(B, relationDomain(f))) ==> (x === ∅)))
+    // ) by InstantiateForall(x)(app.definition of (x -> B, b -> x))
+    // val s2 = have(
+    //   !(((functional(f) /\ in(B, relationDomain(f)))
+    //     ==> in(pair(B, x), f)) /\ ((!functional(f) \/ !in(B, relationDomain(f))) ==> (x === ∅)))
+    // ) by Tautology.from(s1, appDef)
+    // val s3 = have(
+    //   (!((functional(f) /\ in(B, relationDomain(f)))
+    //     ==> in(pair(B, x), f)) \/ !((!functional(f) \/ !in(B, relationDomain(f))) ==> (x === ∅)))
+    // ) by Tautology.from(s2)
+    // val sus = have(
+    //   (!(!(functional(f) /\ in(B, relationDomain(f)))
+    //     \/ in(pair(B, x), f)) \/ !(!(!functional(f) \/ !in(B, relationDomain(f))) \/ (x === ∅)))
+    // ) by Tautology.from(lastStep)
+    // // ---------------------------------------------------------------------------------------------
+    // // BUG IN LISA ???
+    // val ss = have(
+    //   (((functional(f) /\ in(B, relationDomain(f)))
+    //     /\ !in(pair(B, x), f)) \/ ((!functional(f) \/ !in(B, relationDomain(f))) /\ !(x === ∅)))
+    // ) by Tautology.from(sus)
+    // val noway = have(
+    //   (((functional(f) /\ in(B, relationDomain(f)))
+    //     \/ !in(pair(B, x), f)) \/ ((!functional(f) \/ !in(B, relationDomain(f))) /\ !(x === ∅)))
+    // ) by Tautology.from(sus)
+    // // ----------------------------------------------------------------------------------------------
+    //
+    // val c = have(
+    //   (((functional(f) /\ in(B, relationDomain(f)))
+    //   //                           false         \/     false                  /\ ???? = false
+    //     /\ !in(pair(B, x), f)) \/ ((!functional(f) \/ !in(B, relationDomain(f))) /\ !(x === ∅)))
+    // ) by Tautology.from(sus)
+    // have(
+    //   (!in(pair(B, x), f))
+    // ) by Tautology.from(bInDomain, fIsFun, lastStep)
+    //
+    // // can i get a contradiction from here?
+    // // since in(x, relationRange(f)) ==> exists(a, in(pair(a,x), f))
+    // // with f`a = x and f`a \in a
+    // // in(x, B) so f`a \in B
+    // // so a should be in B
+    //
+    // // val relationRange = DEF(r) --> The(z, ∀(t, in(t, z) <=> ∃(a, in(pair(a, t), r))))(relationRangeUniqueness)
+    // // in(x, relationRange(f)) <=> exists(a, in(pair(a, x), f))
+    // // val relationDomain = DEF(r) --> The(z, ∀(t, in(t, z) <=> ∃(a, in(pair(t, a), r))))(relationDomainUniqueness)
+    //
+    // sorry
   }
 
-  val intersectionSubsetSingleton = Lemma(
+  val mm = Lemma(
     in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
       |- subset(setIntersection(B, relationRange(f)), singleton(app(f, B)))
   ) {
     assume(in(f, Pi(A, identityFunction(A))))
     assume(!in(emptySet, A))
+
+    // val Pi = DEF(x, f) --> The(z, ∀(g, in(g, z) <=> (in(g, powerSet(Sigma(x, f))) /\ (subset(x, relationDomain(g)) /\ functional(g)))))(piUniqueness)
+    have(
+      forall(
+        t,
+        in(t, Pi(A, identityFunction(A)))
+          <=> (in(t, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(t)) /\ functional(t)))
+      )
+    ) by InstantiateForall(Pi(A, identityFunction(A)))(Pi.definition of (x -> A, f -> identityFunction(A)))
+    thenHave(
+      in(f, Pi(A, identityFunction(A)))
+        <=> (in(f, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(f)) /\ functional(f)))
+    ) by InstantiateForall(f)
+    val fIsFun = thenHave(functional(f)) by Tautology
+
+    // val rangeDef = thenHave(in(x, relationRange(f)) <=> (∃(a, in(pair(a, x), f)))) by InstantiateForall(x)
+
+    // i want to prove that
+    // setIntersection(setIntersection(B, relationRange(f)), singleton(app(f, B))) === setIntersection(B, relationRange(f))
+
+    val s1 = have(relationDomain(f) === A) by Tautology.from(domainOfDependentProductFunction)
     assume(in(B, A))
+    val bInDomain = thenHave(in(B, relationDomain(f))) by Substitution.ApplyRules(s1)
+
+    have(forall(t, in(t, relationRange(f)) <=> exists(y, in(pair(y, t), f)))) by InstantiateForall(relationRange(f))(relationRange.definition of (r -> f))
+    val rangeDef = thenHave(in(x, relationRange(f)) <=> (∃(a, in(pair(a, x), f)))) by InstantiateForall(x)
+    // have(in(app(f, B), relationRange(f)))
+
+    have(in(f, Pi(A, identityFunction(A))) /\ in(B, A) |- in(app(f, B), app(identityFunction(A), B))) by Tautology.from(apply_type of (f -> f, A -> A, B -> identityFunction(A), a -> B))
+
+    val appDef = have(
+      forall(b, (app(f, a) === b) <=> (((functional(f) /\ in(a, relationDomain(f))) ==> in(pair(a, b), f)) /\ ((!functional(f) \/ !in(a, relationDomain(f))) ==> (b === ∅))))
+    ) by Tautology.from(app.definition of x -> a)
 
     // lemma2
     // (pairwiseDisjoint(A), in(B, A), in(C, A), in(D, B), in(D, C), functional(f)) |- app(f, B) === app(f, C)
 
-    val inter = setIntersection(B, relationRange(f))
-    val singl = singleton(app(f, B))
+    // I have pairwiseDisjoint(A)
+    //        in(B,A)
+    //        in(x,B)
+    // C = relationRange(f)
+    //        in(C,A)
+    //        in(x,C)
+    // x = f`B -> f`B in B since {f`B} subset B
+    //         -> f`B in C by definition
+    // ==>
+    // app(f,B) === app(f,relationRange(f))
 
-    have(in(z, inter) ==> in(z, singl)) by Tautology.from(intersectionInSingleton of (x -> z))
-    thenHave(forall(z, in(z, inter) ==> in(z, singl))) by RightForall
+    // x in setIntersection(B, relationRange(f))
+    // ==> x in  singleton(app(f,B))
 
-    have(subset(inter, singl)) by Tautology.from(lastStep, subsetAxiom of (x -> inter, y -> singl))
+    // x in B
+    // x in relationRange(f) --> ∃(a, in(pair(a, x), f))
+    // then
+    // x = app(f,B)
+    //
+    // val app = DEF(f, x) --> The(z, ((functional(f) /\ in(x, relationDomain(f))) ==> in(pair(x, z), f)) /\ ((!functional(f) \/ !in(x, relationDomain(f))) ==> (z === ∅)))(functionApplicationUniqueness)
+    //
+    // val pairInFunctionIsApp = Theorem(
+    //   functional(f) /\ in(a, relationDomain(f)) |- in(pair(a, b), f) <=> (app(f, a) === b)
+
+    have(functional(f) /\ in(a, relationDomain(f)) |- in(pair(a, b), f) <=> (app(f, a) === b)) by Tautology.from(pairInFunctionIsApp)
+    thenHave(functional(f) /\ in(a, relationDomain(f)) |- in(pair(a, b), f) ==> (app(f, a) === b)) by Weakening
+    thenHave(functional(f) /\ in(a, relationDomain(f)) /\ in(pair(a, b), f) |- (app(f, a) === b)) by Restate
+    thenHave((functional(f) /\ in(a, relationDomain(f)) /\ in(pair(a, b), f)) ==> (app(f, a) === b)) by Restate
+    thenHave(forall(b, (functional(f) /\ in(a, relationDomain(f)) /\ in(pair(a, b), f)) ==> (app(f, a) === b))) by RightForall
+    thenHave(forall(a, forall(b, (functional(f) /\ in(a, relationDomain(f)) /\ in(pair(a, b), f)) ==> (app(f, a) === b)))) by RightForall
+    thenHave(forall(b, (functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, b), f)) ==> (app(f, B) === b))) by InstantiateForall(B)
+    val impl = thenHave(forall(a, (functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, a), f)) ==> (app(f, B) === a))) by Restate
+    // val impl = thenHave((functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, z), f)) ==> (app(f, B) === z)) by InstantiateForall(z)
+    // thenHave((functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, z), f)) ==> (app(f, B) === z)) by RightForall
+
+    have((exists(a, in(pair(B, a), f)) /\ functional(f) /\ in(B, relationDomain(f))) ==> in(pair(B, z), f)) subproof {
+      assume(functional(f))
+      assume(in(B, relationDomain(f)))
+      assume(!in(pair(B, z), f))
+
+      sorry
+    }
+
+    // f`B = z
+    // app(f, B) === z
+
+    have(in(z, setIntersection(B, relationRange(f))) ==> in(z, singleton(app(f, B)))) subproof {
+      assume(in(z, setIntersection(B, relationRange(f))))
+      val s1 = have(in(z, B) /\ in(z, relationRange(f))) by Tautology.from(setIntersectionMembership of (t -> z, x -> B, y -> relationRange(f)))
+      val s2 = have(in(z, B)) by Weakening(s1)
+      val s3 = have(in(z, relationRange(f))) by Weakening(s1)
+
+      have(forall(t, in(t, relationRange(f)) <=> exists(a, in(pair(a, t), f)))) by InstantiateForall(relationRange(f))(relationRange.definition of (r -> f))
+      val rangeDef = thenHave(in(z, relationRange(f)) <=> (∃(a, in(pair(a, z), f)))) by InstantiateForall(z)
+
+      val domainDefAll = have(forall(t, in(t, relationDomain(f)) <=> exists(a, in(pair(t, a), f)))) by InstantiateForall(relationDomain(f))(relationDomain.definition of (r -> f))
+      val domainDef = thenHave(in(B, relationDomain(f)) <=> (∃(a, in(pair(B, a), f)))) by InstantiateForall(B)
+
+      val s4 = have(exists(a, in(pair(B, a), f))) by Tautology.from(bInDomain, domainDef)
+
+      // val domainDef = thenHave(in(B, relationDomain(f)) <=> (∃(a, in(pair(B, a), f)))) by InstantiateForall(B)
+      val exaz = have(exists(a, in(pair(a, z), f))) by Tautology.from(s3, rangeDef)
+      thenHave(exists(z, exists(a, in(pair(a, z), f)))) by RightExists
+
+      // have(exists(a, exists(z, in(pair(a, z), f)))) by Tautology.from(lastStep, existsDistribute)
+      // thenHave(exists(a, in(a, relationDomain(f)))) by Tautology.from(domainDef of (B -> a))
+
+      val tab = have(
+        exists(
+          a,
+          (exists(z, in(pair(a, z), f)))
+            /\
+              forall(t, in(t, relationDomain(f)) <=> exists(y, in(pair(t, y), f)))
+        )
+          ==> exists(a, in(a, relationDomain(f)))
+      ) by Tableau
+
+      // have(exists(a, ()))
+
+      //////////////////////////////////////////////////////////////
+
+      val p = formulaVariable
+      val ex = have(exists(a, functional(f) /\ in(pair(B, a), f) /\ in(B, relationDomain(f)))) by Tautology.from(
+        fIsFun,
+        bInDomain,
+        s4,
+        existentialConjunctionWithClosedFormula of
+          (
+            x -> a,
+            p -> functional(f) /\ in(B, relationDomain(f)),
+            P -> lambda(a, in(pair(B, a), f))
+          )
+      )
+
+      have(
+        (exists(a, (functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, a), f))) /\ forall(a, (functional(f) /\ in(B, relationDomain(f)) /\ in(pair(B, a), f)) ==> (app(f, B) === a)))
+          |- (exists(a, (app(f, B) === a)))
+      ) by Tableau
+
+      have(exists(a, app(f, B) === a)) by Tautology.from(ex, impl, lastStep)
+
+      // val existentialConjunctionDistribution = Theorem(
+      //   exists(x, P(x) /\ Q(x)) |- exists(x, P(x)) /\ exists(x, Q(x))
+
+      // in(B, relationDomain(f)) <=> exists(a, in(pair(B, a), f))
+      // val relationDomain = DEF(r) --> The(z, ∀(t, in(t, z) <=> ∃(a, in(pair(t, a), r))))(relationDomainUniqueness)
+
+      // in(z, relationRange(f)) <=> exists(a, in(pair(a, z), f))
+      // val relationRange = DEF(r) --> The(z, ∀(t, in(t, z) <=> ∃(a, in(pair(a, t), r))))(relationRangeUniqueness)
+
+      sorry
+    }
+    // have(forall(z, in(z, singleton(x)) ==> in(z, A))) by Tautology.from(subsetAxiom of (x -> singleton(x), y -> A))
+
+    // have(exists(a, in(pair(a,x), f)) |-
+
+    sorry
+  }
+
+  val fake = Theorem(
+    exists(a, P(a)) /\ forall(a, P(a) ==> Q(a)) |- exists(a, Q(a))
+  ) {
+    have(thesis) by Tableau
   }
 
   // lemma AC1_AC2: "AC1 ⟹ AC2"
@@ -582,35 +754,33 @@ object AxiomOfChoice extends lisa.Main {
 
       have(!in(emptySet, A) ==> (exists(f, in(f, Pi(A, identityFunction(A)))))) by InstantiateForall
       have(exists(f, in(f, Pi(A, identityFunction(A))))) by Tautology.from(lastStep)
+      // have(in(f, Pi(A, identityFunction(A)))) by Tautology.from(lastStep, closedFormulaExistential of (x -> f, p -> (in(f, Pi(A, identityFunction(A))))))
 
-      val inter = setIntersection(B, relationRange(f))
-      val singl = singleton(app(f, B))
+      // lemma1
+      // in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
+      //  |- subset(singleton(app(f, B)), setIntersection(B, relationRange(f)))
 
-      val ssub1 = have(in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y))) subproof {
-        assume(in(B, A))
-        assume(in(f, Pi(A, identityFunction(A))))
+      val C = relationRange(f)
 
-        val fwd = have(
-          subset(singl, inter)
-        ) by Tautology.from(AC1_AC2_aux1)
-        val bwd = have(
-          subset(inter, singl)
-        ) by Tautology.from(intersectionSubsetSingleton)
-        have(inter === singl) by Tautology.from(fwd, bwd, subsetEqualitySymmetry of (x -> inter, y -> singl))
-        thenHave(exists(y, setIntersection(B, relationRange(f)) === singleton(y))) by RightExists
-      }
-      thenHave(forall(B, in(f, Pi(A, identityFunction(A))) /\ in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y)))) by RightForall
-      thenHave(exists(C, forall(B, in(f, Pi(A, identityFunction(A))) /\ in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))) by RightExists
+      val s1 = have(
+        in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
+          |- subset(singleton(app(f, B)), setIntersection(B, relationRange(f)))
+      ) by Tautology.from(AC1_AC2_aux1)
+      val s2 = have(
+        in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
+          |- setIntersection(singleton(app(f, B)), setIntersection(B, relationRange(f))) === singleton(app(f, B))
+      ) by Tautology.from(s1, intersectionOfSubsets of (x -> singleton(app(f, B)), y -> setIntersection(B, relationRange(f))))
+
+      // A = {{1,2,3},{4,5,6},{7,8,9}}
+      // B = {1,2,3}
+      // relationRange(f) = {2,4,8}
+
+      // lemma2
+      // (pairwiseDisjoint(A), in(B, A), in(C, A), in(D, B), in(D, C), functional(f)) |- app(f, B) === app(f, C)
 
       sorry
     }
 
     sorry
-  }
-
-  val ttt = Theorem(
-    forall(x, P(x) /\ p) <=> (forall(x, P(x)) /\ p)
-  ) {
-    have(thesis) by Tableau
   }
 }
