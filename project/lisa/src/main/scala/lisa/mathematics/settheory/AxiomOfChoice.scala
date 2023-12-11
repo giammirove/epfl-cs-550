@@ -11,8 +11,10 @@ import lisa.automation.settheory.SetTheoryTactics.*
 import lisa.mathematics.fol.*
 import lisa.mathematics.fol.Quantifiers.closedFormulaExistential
 import lisa.mathematics.fol.Quantifiers.existentialConjunctionWithClosedFormula
+import lisa.mathematics.fol.Quantifiers.equalityTransitivity
 
 import lisa.mathematics.settheory.SetTheory.pair
+import lisa.mathematics.settheory.SetTheory.pairExtensionality
 import lisa.mathematics.settheory.SetTheory.pairInCartesianProduct
 import lisa.mathematics.settheory.SetTheory.setIntersection
 import lisa.mathematics.settheory.SetTheory.functional
@@ -48,6 +50,7 @@ object AxiomOfChoice extends lisa.Main {
   private val a = variable
   private val b = variable
   private val c = variable
+  private val d = variable
   private val f = variable
   private val g = variable
   private val p = formulaVariable
@@ -112,11 +115,11 @@ object AxiomOfChoice extends lisa.Main {
   // see `pairSingletonIsFunctional`
   val identityFunctionIsFunctional = Theorem(functional(identityFunction(A))) {
 
-    var id = identityFunction(A)
+    val id = identityFunction(A)
 
-    var rel = have(relation(id)) subproof {
+    val rel = have(relation(id)) subproof {
       have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(
-        identityFunction.definition of (x -> A)
+        identityFunction.definition of (x -> A),
       )
       thenHave(forall(t, in(t, id) ==> in(t, cartesianProduct(A, A)))) by Tautology
       have(relationBetween(id, A, A)) by Tautology.from(
@@ -128,8 +131,40 @@ object AxiomOfChoice extends lisa.Main {
       thenHave(exists(a, exists(b, relationBetween(id, a, b)))) by RightExists
       have(thesis) by Tautology.from(lastStep, relation.definition of r -> id)
     }
+    
+    val uniq = have(forall(a, exists(b, in(pair(a, b), id)) ==> existsOne(b, in(pair(a, b), id)))) subproof {
+      val a_eq_b_premis2 = have(((a === y) /\ (y === b)) |- (a === b)) by Restate.from(equalityTransitivity of (x -> a, z -> b))
+      have((pair(a, b) === pair(y, y)) |- (pair(a, b) === pair(y, y))) by Tautology
+      thenHave((pair(a, b) === pair(y, y)) |- ((a === y) /\ (b === y))) by Substitution.ApplyRules(pairExtensionality of (c -> y, d -> y))
+      val a_eq_b_premis1 = thenHave((pair(a, b) === pair(y, y)) |- ((a === y) /\ (y === b))) by Tautology
+      // val a_eq_b = have((pair(a, b) === pair(y, y)) ==> (a === b)) by Substitution.ApplyRules(eq_trans)(premis1)
+      have((pair(a, b) === pair(y, y)) |- (a === b)) by Tautology.from(a_eq_b_premis1, a_eq_b_premis2)
+      val a_eq_b = thenHave(exists(y, pair(a, b) === pair(y, y)) |- (a === b)) by LeftExists
+      
+      have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(identityFunction.definition of (x -> A))
+      thenHave(in(pair(a, b), id) <=> in(pair(a, b), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(a, b) === pair(y, y)))) by InstantiateForall(pair(a, b))
+      thenHave(in(pair(a, b), id) |- in(pair(a, b), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(a, b) === pair(y, y)))) by Weakening
+      thenHave(in(pair(a, b), id) |- in(pair(a, b), cartesianProduct(A, A)) /\ exists(y, pair(a, b) === pair(y, y))) by Weakening
+      val eq_premis = thenHave(in(pair(a, b), id) |- exists(y, pair(a, b) === pair(y, y))) by Weakening
+      val eq = have(in(pair(a, b), id) |- (a === b)) by Tautology.from(a_eq_b, eq_premis)
+      
+      have(in(pair(a, b), id) |- in(pair(a, b), id)) by Tautology
+      thenHave((in(pair(a, b), id), (z === b)) |- in(pair(a, z), id)) by RightSubstEq.withParameters(List((z, b)), lambda(z, in(pair(a, z), id)))
+      val dir1 = thenHave(in(pair(a, b), id) |- (z === b) ==> in(pair(a, z), id)) by Tautology
 
-    sorry
+      have((z === a) /\ (a === b) |- (z === b)) by Restate.from(equalityTransitivity of (x -> z, y -> a, z -> b))
+      have(in(pair(a, b), id) |- (z === a) ==> (z === b)) by Tautology.from(eq, lastStep)
+      val dir2 = have(in(pair(a, b), id) |- in(pair(a, z), id) ==> (z === b)) by Tautology.from(eq of (b -> z), lastStep)
+
+      val equiv_z = have(in(pair(a, b), id) |- (z === b) <=> in(pair(a, z), id)) by Tautology.from(dir1, dir2)
+      thenHave(in(pair(a, b), id) |- forall(z, (z === b) <=> in(pair(a, z), id))) by RightForall
+      thenHave(in(pair(a, b), id) |- exists(b, forall(z, (z === b) <=> in(pair(a, z), id)))) by RightExists
+      thenHave(in(pair(a, b), id) |- existsOne(b, in(pair(a, b), id))) by RightExistsOne
+      thenHave(exists(b, in(pair(a, b), id)) |- existsOne(b, in(pair(a, b), id))) by LeftExists
+      thenHave(exists(b, in(pair(a, b), id)) ==> existsOne(b, in(pair(a, b), id))) by Restate
+      thenHave(thesis) by RightForall
+    }
+    have(thesis) by Tautology.from(rel, uniq, functional.definition of f -> id)
   }
 
   val restrictedFunctionOverIdentity = Lemma(restrictedFunction(identityFunction(A), A) === A) {
