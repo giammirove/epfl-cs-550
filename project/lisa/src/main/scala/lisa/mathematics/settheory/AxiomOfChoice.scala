@@ -115,8 +115,8 @@ object AxiomOfChoice extends lisa.Main {
     var id = identityFunction(A)
 
     var rel = have(relation(id)) subproof {
-      have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ existsOne(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(
-        identityFunction.definition of (x -> A),
+      have(forall(t, in(t, id) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(id)(
+        identityFunction.definition of (x -> A)
       )
       thenHave(forall(t, in(t, id) ==> in(t, cartesianProduct(A, A)))) by Tautology
       have(relationBetween(id, A, A)) by Tautology.from(
@@ -473,16 +473,6 @@ object AxiomOfChoice extends lisa.Main {
     have(thesis) by Tautology.from(lastStep)
   }
 
-  val test = Theorem(in(x, b) |- (in(x, b) \/ in(y, b)) <=> in(x, b)) {
-    have(thesis) by Tautology
-  }
-
-  val existsDistribute = Lemma(
-    exists(z, exists(a, in(pair(a, z), f))) <=> exists(a, exists(z, in(pair(a, z), f)))
-  ) {
-    sorry
-  }
-
   val notInFunction = Lemma(
     in(f, Pi(A, identityFunction(A))) /\ !in(emptySet, A) /\ in(B, A) /\ !in(pair(B, x), f)
       |- !in(B, relationDomain(f)) \/ !in(x, relationRange(f))
@@ -492,8 +482,7 @@ object AxiomOfChoice extends lisa.Main {
     // prove !in(pair(B,x), f) |- !in(x,relationRange(f))
     sorry
   }
-
-  val intersectionInSingleton = Lemma(
+val intersectionInSingleton = Lemma(
     in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
       |- in(x, setIntersection(B, relationRange(f))) ==> in(x, singleton(app(f, B)))
   ) {
@@ -581,14 +570,14 @@ object AxiomOfChoice extends lisa.Main {
       assume(pairwiseDisjoint(A))
 
       have(!in(emptySet, A) ==> (exists(f, in(f, Pi(A, identityFunction(A)))))) by InstantiateForall
-      have(exists(f, in(f, Pi(A, identityFunction(A))))) by Tautology.from(lastStep)
+      val fExists = have(exists(f, in(f, Pi(A, identityFunction(A))))) by Tautology.from(lastStep)
 
       val inter = setIntersection(B, relationRange(f))
       val singl = singleton(app(f, B))
 
-      val ssub1 = have(in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y))) subproof {
-        assume(in(B, A))
+      val ssub1 = have(in(f, Pi(A, identityFunction(A))) |- in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y))) subproof {
         assume(in(f, Pi(A, identityFunction(A))))
+        assume(in(B, A))
 
         val fwd = have(
           subset(singl, inter)
@@ -599,18 +588,26 @@ object AxiomOfChoice extends lisa.Main {
         have(inter === singl) by Tautology.from(fwd, bwd, subsetEqualitySymmetry of (x -> inter, y -> singl))
         thenHave(exists(y, setIntersection(B, relationRange(f)) === singleton(y))) by RightExists
       }
-      thenHave(forall(B, in(f, Pi(A, identityFunction(A))) /\ in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y)))) by RightForall
-      thenHave(exists(C, forall(B, in(f, Pi(A, identityFunction(A))) /\ in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))) by RightExists
-
-      sorry
+      thenHave(in(f, Pi(A, identityFunction(A))) |- forall(B, in(B, A) ==> exists(y, setIntersection(B, relationRange(f)) === singleton(y)))) by RightForall
+      thenHave(in(f, Pi(A, identityFunction(A))) |- exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))) by RightExists
+      thenHave(exists(f, in(f, Pi(A, identityFunction(A)))) |- exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))) by LeftExists
+      have(exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))) by Tautology.from(lastStep, fExists)
     }
 
-    sorry
+    have(
+      forall(
+        A,
+        !in(emptySet, A) /\ pairwiseDisjoint(A)
+          ==> exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))
+      )
+    ) by RightForall(sub1)
   }
 
-  val ttt = Theorem(
-    forall(x, P(x) /\ p) <=> (forall(x, P(x)) /\ p)
-  ) {
-    have(thesis) by Tableau
-  }
+
+
+  val AC2_AC1_aux1 = Lemma(
+      !in(emptySet, A) => !in(emptySet, cartesianProduct(
+      ) {
+    sorry
+      }
 }
