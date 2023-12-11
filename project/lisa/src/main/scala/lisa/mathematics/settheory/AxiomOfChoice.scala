@@ -109,11 +109,35 @@ object AxiomOfChoice extends lisa.Main {
     sorry
   }
 
-  val functionalApplicationOverIdentity = Lemma(app(identityFunction(A), A) === A) {
-    sorry
-  }
+  /*
+    var id = identityFunction(A)
+    // unfold id def over a
+    var rightSide = have (((functional(id) /\ in(A, relationDomain(id))) ==> in(pair(A, A), id)) /\ ((!functional(id) \/ !in(A, relationDomain(id))) ==> (A === ∅))) subproof {
+      assume(functional(id))
+      assume(in(A, relationDomain(id)))
+      have(in(pair(A,A), id)) by 
+    }
+    val appDef = have(
+      app(id, A) === A <=> ((functional(id) /\ in(A, relationDomain(id))) ==> in(pair(A, A), id)) /\ ((!functional(id) \/ !in(A, relationDomain(id))) ==> (A === ∅))
+    ) by InstantiateForall(app.definition of f -> id, b -> A) 
+    have(thesis) by Tautology.from(appDef)
+    */
 
-  val functionalApplicationOverSubset = Lemma(in(B, A) |- (app(identityFunction(A), B) === B)) {
+  val functionalApplicationOfId = Lemma(in(B, A) |- (app(identityFunction(A), B) === B)) {
+    var id = identityFunction(A)
+
+    var rightSide = have()
+    val appDef = have() {
+      assume(functional(id))
+      assume(in(B, relationDomain(id)))
+      have(in(B, A)) by //relationDomain is A
+      have(in(B, A) /\ (t === pair(B, B))) by RightExists
+      have(in(pair(B, B), id)) by //definition
+    }
+    have (
+      (app(id, B) === B) <=> ((functional(id) /\ in(B, relationDomain(id))) ==> in(pair(B, B), id)) /\ ((!functional(id) \/ !in(B, relationDomain(id))) ==> (B === ∅))
+    ) by InstantiateForall(app.definition of f -> id, b -> A) 
+    have(thesis) by Tautology.from(appDef)
     sorry
   }
 
