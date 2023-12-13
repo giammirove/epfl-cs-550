@@ -39,12 +39,6 @@ private[settheory] trait SetTheoryZFCAxioms extends SetTheoryZFAxioms {
   // "AC1 ≡ ∀A. 0∉A ⟶ (∃f. f ∈ (∏X ∈ A. X))"
   final val ac1: this.AXIOM = Axiom(
     "ac1",
-    // TODO: check Pi(A, A)
-    //       my guess is that since A is like {(x,x), (y,y), ...}, if you
-    //       look at the definition of Pi in Lisa it expands the function argument
-    //       as a relation (set of pairs), but in Isabelle they use
-    //       lambda function to express \x in A. x, that it is the identity
-    //       function restricted to A
     forall(A, !in(emptySet, A) ==> (exists(f, in(f, Pi(A, identityFunction(A))))))
   )
 

@@ -43,6 +43,7 @@ import lisa.mathematics.settheory.SetTheory.cartesianProduct
 import lisa.mathematics.settheory.SetTheory.setWithElementNonEmpty
 import lisa.mathematics.settheory.SetTheory.subsetEqualitySymmetry
 import lisa.mathematics.settheory.SetTheory.firstInPair
+import lisa.mathematics.settheory.SetTheory.firstInPairReduction
 import lisa.mathematics.settheory.SetTheory.secondInPair
 import lisa.mathematics.settheory.SetTheory.productWithEmptySetEmpty
 import lisa.mathematics.settheory.SetTheory.setUnion
@@ -73,6 +74,7 @@ object AxiomOfChoice extends lisa.Main {
   private val D = variable
   private val X = variable
 
+  private val phi = predicate[1]
   private val P = predicate[1]
   private val Q = predicate[1]
 
@@ -107,8 +109,117 @@ object AxiomOfChoice extends lisa.Main {
   val identityFunction = DEF(x) --> The(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ ∃(y, in(y, x) /\ (t === pair(y, y)))))(identityFunctionUniqueness)
 
   // Rovelli Gianmaria
+  val pairInIdentityFunction = Lemma(in(pair(a, b), identityFunction(A)) |- (a === b)) {
+    assume(in(pair(a, b), identityFunction(A)))
+
+    have(forall(t, in(t, identityFunction(A)) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(identityFunction(A))(
+      identityFunction.definition of (x -> A)
+    )
+    thenHave(in(pair(a, b), identityFunction(A)) <=> in(pair(a, b), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(a, b) === pair(y, y)))) by InstantiateForall(pair(a, b))
+    val s1 = thenHave(exists(y, in(y, A) /\ (pair(a, b) === pair(y, y)))) by Tautology
+
+    val s2 = have(in(y, A) /\ (pair(a, b) === pair(y, y)) |- (a === y) /\ (b === y)) by Tautology.from(pairExtensionality of (c -> y, d -> y))
+    val s3 = thenHave(in(y, A) /\ (pair(a, b) === pair(y, y)) |- (a === y)) by Tautology
+    val s4 = have(in(y, A) /\ (pair(a, b) === pair(y, y)) |- (b === y)) by Tautology.from(s2)
+    val s5 = thenHave(in(y, A) /\ (pair(a, b) === pair(y, y)) |- (b === a)) by Substitution.ApplyRules(s3)
+    thenHave(exists(y, in(y, A) /\ (pair(a, b) === pair(y, y))) |- (b === a)) by LeftExists
+    have(b === a) by Tautology.from(lastStep, s1)
+  }
+
+  // Rovelli Gianmaria
+  val firstInPairType = Lemma(
+    in(x, cartesianProduct(A, B)) |- in(firstInPair(x), A)
+  ) {
+    assume(in(x, cartesianProduct(A, B)))
+    have(
+      forall(
+        t,
+        in(t, cartesianProduct(A, B))
+          <=> ((in(t, powerSet(powerSet(setUnion(A, B))))) /\ (∃(a, ∃(b, (t === pair(a, b)) /\ in(a, A) /\ in(b, B)))))
+      )
+    ) by InstantiateForall(cartesianProduct(A, B))(cartesianProduct.definition of (x -> A, y -> B))
+    thenHave(
+      in(x, cartesianProduct(A, B))
+        <=> ((in(x, powerSet(powerSet(setUnion(A, B))))) /\ (∃(a, ∃(b, (x === pair(a, b)) /\ in(a, A) /\ in(b, B)))))
+    ) by InstantiateForall(x)
+    have((in(x, powerSet(powerSet(setUnion(A, B))))) /\ (∃(a, ∃(b, (x === pair(a, b)) /\ in(a, A) /\ in(b, B))))) by Tautology.from(lastStep)
+    val s1 = thenHave(∃(a, ∃(b, (x === pair(a, b)) /\ in(a, A) /\ in(b, B)))) by Tautology
+
+    have((x === pair(a, b)) /\ in(a, A) /\ in(b, B) |- in(firstInPair(x), A)) subproof {
+      val subs = assume(x === pair(a, b))
+      assume(in(a, A))
+      assume(in(b, B))
+      have(firstInPair(pair(a, b)) === a) by Tautology.from(firstInPairReduction of (x -> a, y -> b))
+      val ss1 = thenHave(firstInPair(x) === a) by Substitution.ApplyRules(subs)
+      have(in(a, A)) by Hypothesis
+      thenHave(in(firstInPair(x), A)) by Substitution.ApplyRules(ss1)
+    }
+    thenHave(exists(b, (x === pair(a, b)) /\ in(a, A) /\ in(b, B)) |- in(firstInPair(x), A)) by LeftExists
+    thenHave(exists(a, exists(b, (x === pair(a, b)) /\ in(a, A) /\ in(b, B))) |- in(firstInPair(x), A)) by LeftExists
+
+    have(in(firstInPair(x), A)) by Tautology.from(lastStep, s1)
+  }
+
+  // Rovelli Gianmaria
+  val inclusionImpliesInclusionInIdentity = Lemma(in(x, A) <=> in(pair(x, x), identityFunction(A))) {
+    have(forall(t, in(t, identityFunction(A)) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(identityFunction(A))(
+      identityFunction.definition of (x -> A)
+    )
+    val idDef =
+      thenHave(in(pair(x, x), identityFunction(A)) <=> in(pair(x, x), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by InstantiateForall(pair(x, x))
+
+    val fwd = have(in(x, A) ==> in(pair(x, x), identityFunction(A))) subproof {
+      assume(in(x, A))
+      val ss1 = have(in(pair(x, x), cartesianProduct(A, A))) by Tautology.from(pairInCartesianProduct of (x -> A, y -> A, a -> x, b -> x))
+      have(in(x, A) /\ (pair(x, x) === pair(x, x))) by Tautology
+      val ss2 = thenHave(exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by RightExists
+      have(thesis) by Tautology.from(ss1, ss2, idDef)
+    }
+
+    val bwd = have(in(pair(x, x), identityFunction(A)) ==> in(x, A)) subproof {
+      assume(in(pair(x, x), identityFunction(A)))
+
+      val ss1 = have(firstInPair(pair(x, x)) === x) by Tautology.from(firstInPairReduction of (x -> x, y -> x))
+
+      have(forall(t, in(t, identityFunction(A)) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(identityFunction(A))(
+        identityFunction.definition of (x -> A)
+      )
+      thenHave(in(pair(x, x), identityFunction(A)) <=> in(pair(x, x), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by InstantiateForall(pair(x, x))
+      thenHave(in(pair(x, x), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by Tautology
+      thenHave(in(pair(x, x), cartesianProduct(A, A))) by Tautology
+
+      have(in(firstInPair(pair(x, x)), A)) by Tautology.from(lastStep, firstInPairType of (x -> pair(x, x), A -> A, B -> A))
+      thenHave(in(x, A)) by Substitution.ApplyRules(ss1)
+    }
+
+    have(in(x, A) <=> in(pair(x, x), identityFunction(A))) by Tautology.from(fwd, bwd)
+  }
+
+  // Rovelli Gianmaria
   val domainOfIdentityFunction = Lemma(relationDomain(identityFunction(A)) === A) {
-    sorry
+    have(forall(t, in(t, relationDomain(identityFunction(A))) <=> exists(a, in(pair(t, a), identityFunction(A))))) by InstantiateForall(relationDomain(identityFunction(A)))(
+      relationDomain.definition of (r -> identityFunction(A))
+    )
+    val relDomDef = thenHave(in(z, relationDomain(identityFunction(A))) <=> exists(a, in(pair(z, a), identityFunction(A)))) by InstantiateForall(z)
+    val fwd = have(in(z, relationDomain(identityFunction(A))) ==> in(z, A)) subproof {
+      assume(in(z, relationDomain(identityFunction(A))))
+      val s1 = have(exists(a, in(pair(z, a), identityFunction(A)))) by Tautology.from(relDomDef)
+      val subs = have(in(pair(z, a), identityFunction(A)) |- z === a) by Tautology.from(pairInIdentityFunction of (a -> z, b -> a))
+      have(in(pair(z, a), identityFunction(A)) |- in(pair(z, a), identityFunction(A))) by Restate
+      thenHave(in(pair(z, a), identityFunction(A)) |- in(pair(z, z), identityFunction(A))) by Substitution.ApplyRules(subs)
+      thenHave(exists(a, in(pair(z, a), identityFunction(A))) |- in(pair(z, z), identityFunction(A))) by LeftExists
+      have(in(pair(z, z), identityFunction(A))) by Tautology.from(lastStep, s1)
+      have(in(z, A)) by Tautology.from(lastStep, inclusionImpliesInclusionInIdentity of (x -> z))
+    }
+    val bwd = have(in(z, A) ==> in(z, relationDomain(identityFunction(A)))) subproof {
+      assume(in(z, A))
+      have(in(pair(z, z), identityFunction(A))) by Tautology.from(inclusionImpliesInclusionInIdentity of (x -> z))
+      thenHave(exists(a, in(pair(z, a), identityFunction(A)))) by RightExists
+      have(in(z, relationDomain(identityFunction(A)))) by Tautology.from(lastStep, relDomDef)
+    }
+    have(in(z, relationDomain(identityFunction(A))) <=> in(z, A)) by Tautology.from(fwd, bwd)
+    thenHave(forall(z, in(z, relationDomain(identityFunction(A))) <=> in(z, A))) by RightForall
+    have(relationDomain(identityFunction(A)) === A) by Tautology.from(lastStep, extensionalityAxiom of (x -> relationDomain(identityFunction(A)), y -> A))
   }
 
   // Rovelli Gianmaria
@@ -180,21 +291,6 @@ object AxiomOfChoice extends lisa.Main {
   // Rovelli Gianmaria
   val restrictedFunctionOverIdentity = Lemma(restrictedFunction(identityFunction(A), A) === A) {
     sorry
-  }
-
-  // Rovelli Gianmaria
-  val inclusionImpliesInclusionInIdentity = Lemma(in(x, A) |- in(pair(x, x), identityFunction(A))) {
-    assume(in(x, A))
-    have(forall(t, in(t, identityFunction(A)) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(identityFunction(A))(
-      identityFunction.definition of (x -> A)
-    )
-    val idDef =
-      thenHave(in(pair(x, x), identityFunction(A)) <=> in(pair(x, x), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by InstantiateForall(pair(x, x))
-
-    val s1 = have(in(pair(x, x), cartesianProduct(A, A))) by Tautology.from(pairInCartesianProduct of (x -> A, y -> A, a -> x, b -> x))
-    have(in(x, A) /\ (pair(x, x) === pair(x, x))) by Tautology
-    val s2 = thenHave(exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by RightExists
-    have(thesis) by Tautology.from(s1, s2, idDef)
   }
 
   // Rovelli Gianmaria
@@ -853,17 +949,34 @@ object AxiomOfChoice extends lisa.Main {
     thenHave(in(AC2AC1aux2The(X, C), cartesianProduct(X, A))) by Substitution.ApplyRules(subs)
   }
 
+  val firstElementOfAC2AC1aux2TheUniqueness = Theorem(
+    ∃!(g, ∀(t, in(t, g) <=> exists(x, in(x, A) /\ (t === firstInPair(AC2AC1aux2The(x, C))))))
+  ) {
+    sorry
+  }
+  val firstElementOfAC2AC1aux2The = DEF(A, C) -->
+    The(g, ∀(t, in(t, g) <=> exists(x, in(x, A) /\ (t === firstInPair(AC2AC1aux2The(x, C))))))(firstElementOfAC2AC1aux2TheUniqueness)
+
+  // val AC2AC1aux2The = DEF(X, C) --> The(y, (setIntersection(cartesianProduct(X, singleton(X)), C) === singleton(y)))(AC2AC1aux2TheUniqueness)
   // Rovelli Gianmaria
   val AC2AC1aux3 = Lemma(
     forall(D, in(D, cartesianProductWithIdentity(A)) ==> exists(y, setIntersection(D, C) === singleton(y)))
-      ==> (forall(x, in(x, A) ==> in(firstInPair(cartesianProductWithIdentity(x)), Pi(A, identityFunction(A)))))
+      ==> in(firstElementOfAC2AC1aux2The(A, C), Pi(A, identityFunction(A)))
   ) {
     assume(forall(D, in(D, cartesianProductWithIdentity(A)) ==> exists(y, setIntersection(D, C) === singleton(y))))
 
-    have(in(x, A) ==> in(firstInPair(cartesianProductWithIdentity(x)), Pi(A, identityFunction(A)))) subproof {
-      assume(in(x, A))
-
+    val sub1 = have(functional(firstElementOfAC2AC1aux2The(A, C))) subproof {
+      sorry
     }
+
+    val sub2 = have(in(firstElementOfAC2AC1aux2The(A, C), powerSet(Sigma(A, identityFunction(A))))) subproof {
+      sorry
+    }
+
+    val sub3 = have(subset(A, relationDomain(firstElementOfAC2AC1aux2The(A, C)))) subproof {
+      sorry
+    }
+
     sorry
   }
 
