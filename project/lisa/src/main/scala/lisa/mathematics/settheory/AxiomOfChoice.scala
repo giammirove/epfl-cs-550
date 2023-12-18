@@ -13,11 +13,15 @@ import lisa.mathematics.fol.Quantifiers.closedFormulaExistential
 import lisa.mathematics.fol.Quantifiers.existentialConjunctionWithClosedFormula
 import lisa.mathematics.fol.Quantifiers.equalityTransitivity
 
+import lisa.mathematics.settheory.SetTheory.injective
+import lisa.mathematics.settheory.SetTheory.surjective
+import lisa.mathematics.settheory.SetTheory.bijective
 import lisa.mathematics.settheory.SetTheory.pair
 import lisa.mathematics.settheory.SetTheory.pairExtensionality
 import lisa.mathematics.settheory.SetTheory.pairInCartesianProduct
 import lisa.mathematics.settheory.SetTheory.setIntersection
 import lisa.mathematics.settheory.SetTheory.functional
+import lisa.mathematics.settheory.SetTheory.functionFrom
 import lisa.mathematics.settheory.SetTheory.functionalOver
 import lisa.mathematics.settheory.SetTheory.functionalOverApplication
 import lisa.mathematics.settheory.SetTheory.relationDomain
@@ -43,11 +47,15 @@ import lisa.mathematics.settheory.SetTheory.relationBetween
 import lisa.mathematics.settheory.SetTheory.cartesianProduct
 import lisa.mathematics.settheory.SetTheory.setWithElementNonEmpty
 import lisa.mathematics.settheory.SetTheory.subsetEqualitySymmetry
+import lisa.mathematics.settheory.SetTheory.subsetReflexivity
 import lisa.mathematics.settheory.SetTheory.firstInPair
 import lisa.mathematics.settheory.SetTheory.firstInPairReduction
 import lisa.mathematics.settheory.SetTheory.secondInPair
 import lisa.mathematics.settheory.SetTheory.productWithEmptySetEmpty
 import lisa.mathematics.settheory.SetTheory.setUnion
+import lisa.mathematics.settheory.orderings.Ordinals.ordinal
+import lisa.mathematics.settheory.orderings.WellOrders.wellOrder
+import lisa.mathematics.settheory.orderings.PartialOrders.totalOrder
 
 object AxiomOfChoice extends lisa.Main {
   // export everything in this package
@@ -73,7 +81,9 @@ object AxiomOfChoice extends lisa.Main {
   private val B = variable
   private val C = variable
   private val D = variable
+  private val R = variable
   private val X = variable
+  private val Z = variable
 
   private val phi = predicate[1]
   private val P = predicate[1]
@@ -282,67 +292,44 @@ object AxiomOfChoice extends lisa.Main {
     thenHave(subset(f, Sigma(A, B))) by Tautology
   }
 
+  // val setUnionMembership = Theorem(
+  //   in(z, setUnion(x, y)) <=> (in(z, x) \/ in(z, y))
+  // val restrictedFunction = DEF(f, x) --> The(g, ∀(t, in(t, g)
+  // <=> (in(t, f) /\ ∃(y, ∃(z, in(y, x) /\ (t === pair(y, z)))))))(restrictedFunctionUniqueness)
+
   // Rovelli Gianmaria
   val domainType = Lemma(in(pair(a, b), f) /\ in(f, Pi(A, B)) |- in(a, A)) {
     assume(in(pair(a, b), f))
     assume(in(f, Pi(A, B)))
 
-    // towards contradiction
-    assume(!in(a, A))
+    val subs = have(Sigma(A, B) === restrictedFunction(B, A)) by InstantiateForall(Sigma(A, B))(Sigma.definition of (x -> A, f -> B))
 
     have(subset(f, Sigma(A, B))) by Tautology.from(funIsRel)
-    // in(z, f) ==> in(z, Sigma(A,B)) ==> in(z, union(restrictedFunction(B,A)))
-    //   <=>  exists(y, in(y, restrictedFunction(B,A)) /\ in(z, y))
-    // exists(y, in(y, restrictedFunction(B,A)) /\ in(pair(a,b), y))
-    //
-    // val restrictedFunction = DEF(f, x) --> The(g, ∀(t, in(t, g) <=> (in(t, f) /\ ∃(y, ∃(z, in(y, x) /\ (t === pair(y, z)))))))(restrictedFunctionUniqueness)
-    // in(y, restrictedFunction(B,A)) ==> in(y, B) /\ exists(y, exists(z, in(y, A) /\ (t === pair(y,z))))
+    have(forall(z, in(z, f) ==> in(z, Sigma(A, B)))) by Tautology.from(lastStep, subsetAxiom of (x -> f, y -> Sigma(A, B)))
+    thenHave(in(pair(a, b), f) ==> in(pair(a, b), Sigma(A, B))) by InstantiateForall(pair(a, b))
+    thenHave(in(pair(a, b), Sigma(A, B))) by Tautology
+    val s1 = thenHave(in(pair(a, b), restrictedFunction(B, A))) by Substitution.ApplyRules(subs)
 
     have(in(pair(a, b), restrictedFunction(B, A)) <=> (in(pair(a, b), B) /\ in(a, A))) by Tautology.from(restrictedFunctionPairMembership of (t -> a, a -> b, f -> B, x -> A))
-    thenHave(!in(pair(a, b), restrictedFunction(B, A)) <=> !(in(pair(a, b), B) /\ in(a, A))) by Tautology
-    thenHave(!in(pair(a, b), restrictedFunction(B, A)) <=> (!in(pair(a, b), B) \/ !in(a, A))) by Tautology
-    val s1 = thenHave(!in(pair(a, b), restrictedFunction(B, A))) by Tautology
-
-    have(forall(t, in(t, restrictedFunction(B, A)) <=> in(t, B) /\ exists(y, exists(z, in(y, A) /\ (t === pair(y, z)))))) by InstantiateForall(restrictedFunction(B, A))(
-      restrictedFunction.definition of (f -> B, x -> A)
-    )
-    thenHave(in(pair(a, b), restrictedFunction(B, A)) <=> in(pair(a, b), B) /\ exists(y, exists(z, in(y, A) /\ (pair(a, b) === pair(y, z))))) by InstantiateForall(pair(a, b))
-    thenHave(!in(pair(a, b), restrictedFunction(B, A)) <=> !in(pair(a, b), B) \/ forall(y, forall(z, !in(y, A) \/ !(pair(a, b) === pair(y, z))))) by Tautology
-    have(!in(pair(a, b), B) \/ forall(y, forall(z, !in(y, A) \/ !(pair(a, b) === pair(y, z))))) by Tautology.from(lastStep, s1)
-
-    // val restrictedFunctionPairMembership = Lemma(
-    //   in(pair(t, a), restrictedFunction(f, x)) <=> (in(pair(t, a), f) /\ in(t, x))
-    // final val unionAxiom: AXIOM = Axiom("unionAxiom", in(z, union(x)) <=> exists(y, in(y, x) /\ in(z, y)))
-
-    // have(in(pair(a, b), union(restrictedFunction(B, A))) <=> exists(y, in(y, restrictedFunction(B, A)) /\ in(pair(a, b), y)))
-    // have(!in(pair(a, b), union(restrictedFunction(B, A))) <=> forall(y, !in(y, restrictedFunction(B, A)) \/ !in(pair(a, b), y)))
-
-    // val restrictedFunction = DEF(f, x) --> The(g, ∀(t, in(t, g) <=> (in(t, f) /\ ∃(y, ∃(z, in(y, x) /\ (t === pair(y, z)))))))(restrictedFunctionUniqueness)
-    // !in(pair(a,b), restrictedFunction(B, A))
-    // !in(pair(a,b), Sigma(A,B))
-    // !in(pair(a,b), f) --> contradiction
-
-    sorry
-  }
-  val rangeType = Lemma(in(pair(a, b), f) /\ in(f, Pi(A, B)) |- in(b, app(B, a))) {
-    sorry
+    have(in(pair(a, b), B) /\ in(a, A)) by Tautology.from(lastStep, s1)
+    thenHave(in(a, A)) by Tautology
   }
 
   // Rovelli Gianmaria
-  val domainOfDependentProductFunction = Lemma(in(f, Pi(A, identityFunction(A))) |- relationDomain(f) === A) {
-    assume(in(f, Pi(A, identityFunction(A))))
+  val domainOfDependentProductFunction = Lemma(in(f, Pi(A, B)) |- relationDomain(f) === A) {
+    assume(in(f, Pi(A, B)))
     have(forall(t, in(t, relationDomain(f)) <=> exists(a, in(pair(t, a), f)))) by InstantiateForall(relationDomain(f))(
       relationDomain.definition of (r -> f)
     )
     val relDomDef = thenHave(in(z, relationDomain(f)) <=> exists(a, in(pair(z, a), f))) by InstantiateForall(z)
-    have(forall(t, in(t, Pi(A, identityFunction(A))) <=> (in(t, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(t)) /\ functional(t))))) by InstantiateForall(
-      Pi(A, identityFunction(A))
-    )(Pi.definition of (x -> A, f -> identityFunction(A)))
+    have(forall(t, in(t, Pi(A, B)) <=> (in(t, powerSet(Sigma(A, B))) /\ (subset(A, relationDomain(t)) /\ functional(t))))) by InstantiateForall(
+      Pi(A, B)
+    )(Pi.definition of (x -> A, f -> B))
     thenHave(
-      in(f, Pi(A, identityFunction(A)))
-        <=> (in(f, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(f)) /\ functional(f)))
+      in(f, Pi(A, B))
+        <=> (in(f, powerSet(Sigma(A, B))) /\ (subset(A, relationDomain(f)) /\ functional(f)))
     ) by InstantiateForall(f)
-    val fwd = thenHave(in(f, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(f)) /\ functional(f))) by Tautology
+    val fwd = thenHave(in(f, powerSet(Sigma(A, B))) /\ (subset(A, relationDomain(f)) /\ functional(f))) by Tautology
 
     val bwd = have(subset(relationDomain(f), A)) subproof {
 
@@ -351,7 +338,7 @@ object AxiomOfChoice extends lisa.Main {
         assume(!in(z, A))
         val s1 = have(exists(a, in(pair(z, a), f))) by Tautology.from(relDomDef)
 
-        have(in(pair(z, a), f) |- in(z, A)) by Tautology.from(domainType of (a -> z, b -> a, B -> identityFunction(A)))
+        have(in(pair(z, a), f) |- in(z, A)) by Tautology.from(domainType of (a -> z, b -> a, B -> B))
         thenHave(exists(a, in(pair(z, a), f)) |- in(z, A)) by LeftExists
         have(in(z, A)) by Tautology.from(lastStep, s1)
       }
@@ -416,11 +403,6 @@ object AxiomOfChoice extends lisa.Main {
       thenHave(thesis) by RightForall
     }
     have(thesis) by Tautology.from(rel, uniq, functional.definition of f -> id)
-  }
-
-  // Rovelli Gianmaria
-  val restrictedFunctionOverIdentity = Lemma(restrictedFunction(identityFunction(A), A) === A) {
-    sorry
   }
 
   // Rovelli Gianmaria
@@ -492,28 +474,30 @@ object AxiomOfChoice extends lisa.Main {
     have(thesis) by Tautology.from(fwd, bwd)
   }
 
+  // Rovelli Gianmaria
   val inclusionImpliesSubsetOfIdenity = Lemma(in(x, A) |- subset(singleton(pair(x, x)), identityFunction(A))) {
     assume(in(x, A))
 
-    val s1 = have(in(pair(x, x), identityFunction(A))) by Tautology.from(inclusionImpliesInclusionInIdentity)
+    val subsetDef = have(
+      subset(singleton(pair(x, x)), identityFunction(A))
+        <=> (forall(z, in(z, singleton(pair(x, x))) ==> in(z, identityFunction(A))))
+    ) by Tautology.from(subsetAxiom of (x -> singleton(pair(x, x)), y -> identityFunction(A)))
 
-    // proving subset(singleton(pair(x,x)), identityFunction(A))
-    // val intersectionOfSubsets =>   subset(x, y) |- setIntersection(x, y) === x
-    // and so that setIntersection(singleton(pair(x,x), identityFunction(A))) === singleton(pair(x,x))
-    // final val subsetAxiom: AXIOM = Axiom("subsetAxiom", subset(x, y) <=> forall(z, in(z, x) ==> in(z, y)))
-    val s2 = have(in(pair(x, x), singleton(pair(x, x)))) by Tautology.from(singletonHasNoExtraElements of (y -> pair(x, x), x -> pair(x, x)))
-    // val subsetTransitivity = Theorem(
-    //   subset(a, b) /\ subset(b, c) |- subset(a, c)
-
-    // have(thesis) by
-    // have(in(pair(x, x), singleton(pair(x, x))) ==> in(pair(x, x), identityFunction(A))) by Tautology.from(s1, s2)
-    // thenHave(forall(z, in(z, singleton(z)) ==> in(z, identityFunction(A)))) by RightForall
-    // have(
-    //   in(a, A) /\ in(f, Pi(A, x))
-    //     |-
-    //     forall(a, in(a, A) ==> in(a, relationDomain(f)))
-    // ) by Tautology.from(step1, subsetAxiom of (x -> A, y -> relationDomain(f)))
-    sorry
+    have(in(z, singleton(pair(x, x))) ==> in(z, identityFunction(A))) subproof {
+      assume(in(z, singleton(pair(x, x))))
+      val ss1 = have(z === pair(x, x)) by Tautology.from(singletonHasNoExtraElements of (y -> z, x -> pair(x, x)))
+      have(forall(t, in(t, identityFunction(A)) <=> in(t, cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (t === pair(y, y))))) by InstantiateForall(identityFunction(A))(
+        identityFunction.definition of (x -> A)
+      )
+      val iddef = thenHave(in(pair(x, x), identityFunction(A)) <=> in(pair(x, x), cartesianProduct(A, A)) /\ exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by InstantiateForall(pair(x, x))
+      val p1 = have(in(pair(x, x), cartesianProduct(A, A))) by Tautology.from(pairInCartesianProduct of (a -> x, b -> x, x -> A, y -> A))
+      have(in(x, A) /\ (pair(x, x) === pair(x, x))) by Tautology
+      val p2 = thenHave(exists(y, in(y, A) /\ (pair(x, x) === pair(y, y)))) by RightExists
+      have(in(pair(x, x), identityFunction(A))) by Tautology.from(iddef, p1, p2)
+      thenHave(in(z, identityFunction(A))) by Substitution.ApplyRules(ss1)
+    }
+    thenHave(forall(z, in(z, singleton(pair(x, x))) ==> in(z, identityFunction(A)))) by RightForall
+    have(subset(singleton(pair(x, x)), identityFunction(A))) by Tautology.from(lastStep, subsetDef)
   }
 
   // Rovelli Gianmaria
@@ -533,8 +517,6 @@ object AxiomOfChoice extends lisa.Main {
     have(forall(z, in(z, x) <=> in(z, y)) <=> (x === y)) by Tautology.from(extensionalityAxiom)
     thenHave(forall(z, in(z, x) <=> in(z, y))) by Tautology
     thenHave(in(z, x) <=> in(z, y)) by InstantiateForall(z)
-
-    // (app(f, x) === app(f, y)) <=> (((functional(f) /\ in(x, relationDomain(f))) ==> in(pair(x, app(f, y)), f)) /\ ((!functional(f) \/ !in(x, relationDomain(f))) ==> (app(f, y) === ∅)))
 
     val sub1 = have(((functional(f) /\ in(x, relationDomain(f))) |- in(pair(x, app(f, y)), f))) subproof {
       assume(functional(f))
@@ -591,7 +573,7 @@ object AxiomOfChoice extends lisa.Main {
   // (* ********************************************************************** *)
   //  */
   // // lemma AC1_AC2_aux1: "⟦f:(∏X ∈ A. X);  B ∈ A;  0∉A⟧ ⟹ {f`B} ⊆ B ∩ {f`C. C ∈ A}"
-  // // by(fast elim !: apply_type)
+  // // by(fast elim !: applyType)
   //
 
   // lemma function_apply_Pair: "⟦function(f);  a ∈ domain(f)⟧ ⟹ <a,f`a>: f"
@@ -642,16 +624,29 @@ object AxiomOfChoice extends lisa.Main {
     have(thesis) by Tautology.from(step1, sub1, function_apply_pair)
   }
 
-  // // lemma apply_type [TC]: "⟦f ∈ Pi(A,B);  a ∈ A⟧ ⟹ f`a ∈ B(a)"
+  // // lemma applyType [TC]: "⟦f ∈ Pi(A,B);  a ∈ A⟧ ⟹ f`a ∈ B(a)"
   // // by (blast intro: apply_Pair dest: fun_is_rel)
   // Rovelli Gianmaria
-  val apply_type = Lemma(
+  val applyType = Lemma(
     in(f, Pi(A, B)) /\ in(a, A) |- in(app(f, a), app(B, a))
   ) {
     // in(f, Pi(A, B)) /\ in(a, A) |- in(pair(a, app(f, a)), f)
     // since in(f, Pi(A,B)) => subset(A, relationDomain(f)) /\ functional(f)
     // functional(f) /\ in(a, relationDomain(f)) |- in(pair(a, b), f) <=> (app(f, a) === b)
     // so app(f,a) === b
+    // val funIsRel = Lemma(in(f, Pi(A, B)) |- subset(f, Sigma(A, B))) {
+    // val apply_pair = Lemma(
+    //   in(f, Pi(A, B)) /\ in(a, A) |- in(pair(a, app(f, a)), f)
+
+    // val app = DEF(f, x) --> The(z, ((functional(f) /\ in(x, relationDomain(f))) ==> in(pair(x, z), f)) /\ ((!functional(f) \/ !in(x, relationDomain(f))) ==> (z === ∅)))(functionApplicationUniqueness)
+    // val restrictedFunction = DEF(f, x) --> The(g, ∀(t, in(t, g) <=> (in(t, f) /\ ∃(y, ∃(z, in(y, x) /\ (t === pair(y, z)))))))(restrictedFunctionUniqueness)
+
+    // in(b, c) /\ (b === app(f, a)) /\ (c === app(B, a))
+    // in(b, c) /\ in(pair(a, b), f) /\ in(pair(a, c), B)
+    // in(b, c) /\ in(pair(a, b), Sigma(A, B)) /\ in(pair(a, c), B)
+    // in(b, c) /\ in(pair(a, b), restrictedFunction(B, A)) /\ in(pair(a, c), B)
+    // in(b, c) /\ (in(pair(a, b), B) /\ ()) /\ in(pair(a, c), B)
+
     sorry
   }
 
@@ -670,7 +665,7 @@ object AxiomOfChoice extends lisa.Main {
 
       val step1 = have(in(a, singleton(app(f, B))) |- a === app(f, B)) by Tautology.from(singletonHasNoExtraElements of (y -> a, x -> app(f, B)))
 
-      have(in(f, Pi(A, identityFunction(A))) /\ in(B, A) |- in(app(f, B), app(identityFunction(A), B))) by Tautology.from(apply_type of (f -> f, A -> A, B -> identityFunction(A), a -> B))
+      have(in(f, Pi(A, identityFunction(A))) /\ in(B, A) |- in(app(f, B), app(identityFunction(A), B))) by Tautology.from(applyType of (f -> f, A -> A, B -> identityFunction(A), a -> B))
       thenHave(in(f, Pi(A, identityFunction(A))) /\ in(B, A) |- in(app(f, B), B)) by Substitution.ApplyRules(functionalApplicationOfIdentity)
       thenHave(in(f, Pi(A, identityFunction(A))) /\ in(B, A) |- in(a, B)) by Substitution.ApplyRules(step1)
       thenHave(thesis) by Restate
@@ -747,32 +742,35 @@ object AxiomOfChoice extends lisa.Main {
     have(thesis) by Tautology.from(lastStep)
   }
 
-  val notInFunction = Lemma(
-    in(f, Pi(A, identityFunction(A))) /\ !in(emptySet, A) /\ in(B, A) /\ !in(pair(B, x), f)
-      |- !in(B, relationDomain(f)) \/ !in(x, relationRange(f))
-  ) {
-    // prove !in(pair(B,x), f) |- !in(B,relationDomain(f))
+  val firstOfPairInDomain = Lemma(in(pair(a, b), f) |- in(a, relationDomain(f))) {
 
-    // prove !in(pair(B,x), f) |- !in(x,relationRange(f))
-    sorry
+    assume(in(pair(a, b), f))
+    val existsB = thenHave(exists(b, in(pair(a, b), f))) by RightExists
+
+    have(forall(t, in(t, relationDomain(f)) <=> exists(b, in(pair(t, b), f)))) by InstantiateForall(relationDomain(f))(
+      relationDomain.definition of (r -> f)
+    )
+    val relDomDef = thenHave(in(a, relationDomain(f)) <=> exists(b, in(pair(a, b), f))) by InstantiateForall(a)
+    have(in(a, relationDomain(f))) by Tautology.from(lastStep, existsB)
   }
 
   // Rovelli Gianmaria
   val intersectionInSingleton = Lemma(
-    in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
+    pairwiseDisjoint(A) /\ in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
       |- in(x, setIntersection(B, relationRange(f))) ==> in(x, singleton(app(f, B)))
   ) {
     assume(in(x, setIntersection(B, relationRange(f))))
-    // towards contradiction
-    assume(!in(x, singleton(app(f, B))))
     assume(in(f, Pi(A, identityFunction(A))))
     assume(!in(emptySet, A))
-    assume(in(B, A))
+    val BinA = assume(in(B, A))
+    val disj = assume(pairwiseDisjoint(A))
 
     // -------------------------------------------------------------------------------------------------------
     // Preliminaries
-    have(in(x, B) /\ in(x, relationRange(f))) by Tautology.from(setIntersectionMembership of (t -> x, x -> B, y -> relationRange(f)))
+    val prel = have(in(x, B) /\ in(x, relationRange(f))) by Tautology.from(setIntersectionMembership of (t -> x, x -> B, y -> relationRange(f)))
     val xInRange = have(in(x, relationRange(f))) by Weakening(lastStep)
+    val xInB = have(in(x, B)) by Weakening(prel)
+
     have(forall(t, in(t, Pi(A, identityFunction(A))) <=> (in(t, powerSet(Sigma(A, identityFunction(A)))) /\ (subset(A, relationDomain(t)) /\ functional(t))))) by InstantiateForall(
       Pi(A, identityFunction(A))
     )(Pi.definition of (x -> A, f -> identityFunction(A)))
@@ -782,30 +780,56 @@ object AxiomOfChoice extends lisa.Main {
     ) by InstantiateForall(f)
     val fIsFun = thenHave(functional(f)) by Tautology
 
-    val s1bInDomain = have(relationDomain(f) === A) by Tautology.from(domainOfDependentProductFunction)
+    val s1bInDomain = have(relationDomain(f) === A) by Tautology.from(domainOfDependentProductFunction of (B -> identityFunction(A)))
     assume(in(B, A))
     val bInDomain = thenHave(in(B, relationDomain(f))) by Substitution.ApplyRules(s1bInDomain)
+
+    have(forall(t, in(t, relationRange(f)) <=> exists(a, in(pair(a, t), f)))) by InstantiateForall(relationRange(f))(
+      relationRange.definition of (r -> f)
+    )
+    val rangeDef = thenHave(in(x, relationRange(f)) <=> exists(t, in(pair(t, x), f))) by InstantiateForall(x)
+    val existsT = have(exists(t, in(pair(t, x), f))) by Tautology.from(lastStep, xInRange)
+
+    val tInDomain = have(in(pair(t, x), f) |- in(t, relationDomain(f))) by Tautology.from(firstOfPairInDomain of (a -> t, b -> x))
+    val xIsApp = have(
+      in(pair(t, x), f)
+        |- (app(f, t) === x)
+    ) by Tautology.from(lastStep, fIsFun, pairInFunctionIsApp of (a -> t, b -> x))
+    have(in(pair(t, x), f) |- in(x, singleton(app(f, t)))) by Tautology.from(lastStep, singletonHasNoExtraElements of (x -> app(f, t), y -> x))
+
+    val tInA = have(in(pair(t, x), f) |- in(t, A)) by Tautology.from(domainType of (a -> t, b -> x, A -> A, B -> identityFunction(A)))
+    val tsubs = have(in(pair(t, x), f) |- app(identityFunction(A), t) === t) by Tautology.from(lastStep, functionalApplicationOfIdentity of (a -> t, b -> x, A -> A, B -> t))
+
+    have(in(pair(t, x), f) |- in(app(f, t), app(identityFunction(A), t))) by Tautology.from(tInA, applyType of (a -> t, B -> identityFunction(A)))
+    thenHave(in(pair(t, x), f) |- in(app(f, t), t)) by Substitution.ApplyRules(tsubs)
+    val xInT = thenHave(in(pair(t, x), f) |- in(x, t)) by Substitution.ApplyRules(xIsApp)
     // --------------------------------------------------------------------------------------------------------
 
-    val s1 = have(!(x === app(f, B))) by Tautology.from(singletonHasNoExtraElements of (y -> x, x -> app(f, B)))
-
-    have(functional(f) /\ in(B, relationDomain(f)) |- in(pair(B, x), f) <=> (app(f, B) === x)) by Tautology.from(pairInFunctionIsApp of (a -> B, b -> x))
-    thenHave(functional(f) /\ in(B, relationDomain(f)) |- !in(pair(B, x), f) <=> !(app(f, B) === x)) by Tautology
-    have(!in(pair(B, x), f)) by Tautology.from(bInDomain, fIsFun, s1, lastStep)
-    have(!in(B, relationDomain(f)) \/ !in(x, relationRange(f))) by Tautology.from(lastStep, notInFunction)
-    have(!in(x, relationRange(f))) by Tautology.from(bInDomain, lastStep)
-    have(in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A) |- ()) by Tautology.from(xInRange, lastStep)
-    thenHave(in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A) |- in(x, singleton(app(f, B)))) by Weakening
+    have(
+      in(pair(t, x), f)
+        |- app(f, B) === app(f, t)
+    ) by Tautology.from(disj, BinA, tInA, xInB, xInT, fIsFun, AC1AC2aux2 of (C -> t, D -> x))
+    thenHave(
+      in(pair(t, x), f)
+        |- app(f, B) === x
+    ) by Substitution.ApplyRules(xIsApp)
+    thenHave(
+      exists(t, in(pair(t, x), f))
+        |- app(f, B) === x
+    ) by LeftExists
+    have(app(f, B) === x) by Tautology.from(lastStep, existsT)
+    have(in(x, singleton(app(f, B)))) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> x, x -> app(f, B)))
   }
 
   // Rovelli Gianmaria
   val intersectionSubsetSingleton = Lemma(
-    in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
+    pairwiseDisjoint(A) /\ in(f, Pi(A, identityFunction(A))) /\ in(B, A) /\ !in(emptySet, A)
       |- subset(setIntersection(B, relationRange(f)), singleton(app(f, B)))
   ) {
     assume(in(f, Pi(A, identityFunction(A))))
     assume(!in(emptySet, A))
     assume(in(B, A))
+    assume(pairwiseDisjoint(A))
 
     // lemma2
     // (pairwiseDisjoint(A), in(B, A), in(C, A), in(D, B), in(D, C), functional(f)) |- app(f, B) === app(f, C)
@@ -1108,5 +1132,61 @@ object AxiomOfChoice extends lisa.Main {
     }
 
     have(forall(A, !in(emptySet, A) ==> exists(f, in(f, Pi(A, identityFunction(A)))))) by RightForall(sub1)
+  }
+
+  // Well-Ordered Theorem
+
+  // val wf = DEF(r) --> {
+  //   forall(z, !(z === emptySet) \/ (exists(x, in(x, Z) /\ forall(y, in(pair(y, x), r) ==> !in(y, Z)))))
+  // }
+  //
+  // val wf_on = DEF(A, r) --> wf(setIntersection(r, cartesianProduct(A, A)))
+  //
+  // val wellOrder2 = DEF(A, r) --> {
+  //   totalOrder(r) /\ wf_on(A, r)
+  // }
+
+  val equiPollent = DEF(A, B) --> exists(f, bijective(f, A, B))
+
+  val equiPollentReflexivity = Lemma(equiPollent(x, x)) {
+    sorry
+  }
+
+  val WO2WO3 = Lemma(
+    forall(A, exists(a, ordinal(a) /\ equiPollent(A, a)))
+      ==>
+        forall(A, exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b))))
+  ) {
+    have(ordinal(a) /\ equiPollent(A, a) |- subset(a, a) /\ equiPollent(A, a)) by Tautology.from(subsetReflexivity of (x -> a))
+    thenHave(ordinal(a) /\ equiPollent(A, a) |- exists(b, subset(b, a) /\ equiPollent(A, b))) by RightExists
+    thenHave(ordinal(a) /\ equiPollent(A, a) |- ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b))) by Tautology
+    thenHave(ordinal(a) /\ equiPollent(A, a) |- exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b)))) by RightExists
+    thenHave(exists(a, ordinal(a) /\ equiPollent(A, a)) |- exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b)))) by LeftExists
+    thenHave(forall(A, exists(a, ordinal(a) /\ equiPollent(A, a))) |- exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b)))) by LeftForall
+    thenHave(forall(A, exists(a, ordinal(a) /\ equiPollent(A, a))) |- forall(A, exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b))))) by RightForall
+    thenHave(
+      forall(A, exists(a, ordinal(a) /\ equiPollent(A, a)))
+        ==> forall(A, exists(a, ordinal(a) /\ exists(b, subset(b, a) /\ equiPollent(A, b))))
+    ) by Tautology
+  }
+
+  val WO1WO3 = Lemma(
+    forall(A, exists(R, in(R, A) /\ wellOrder(R)))
+      ==>
+        forall(A, exists(a, ordinal(a) /\ equiPollent(A, a)))
+  ) {
+    assume(forall(A, exists(R, in(R, A) /\ wellOrder(R))))
+    // val wellOrder = DEF(p) --> {
+    //   val A = firstInPair(p)
+    //   val B = variable
+    //   val `<p` = secondInPair(p)
+    //   totalOrder(p) /\ forall(B, (subset(B, A) /\ !(B === emptySet)) ==> exists(z, in(z, B) /\ forall(x, in(x, B) ==> (in(pair(z, x), `<p`) \/ (z === x)))))
+    // }
+
+    // val equiPollent = DEF(A, B) --> exists(f, bijective(f, A, B))
+
+    // val elementsOfOrdinalsAreOrdinals = Theorem(
+    //   (ordinal(a), in(b, a)) |- ordinal(b)
+    sorry
   }
 }

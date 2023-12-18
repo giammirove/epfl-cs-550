@@ -2818,7 +2818,8 @@ object SetTheory extends lisa.Main {
    *
    * TODO: explain
    */
-  val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
+  // val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
+  val Sigma = DEF(x, f) --> restrictedFunction(f, x)
 
   val piUniqueness = Theorem(
     ∃!(z, ∀(g, in(g, z) <=> (in(g, powerSet(Sigma(x, f))) /\ (subset(x, relationDomain(g)) /\ functional(g)))))
