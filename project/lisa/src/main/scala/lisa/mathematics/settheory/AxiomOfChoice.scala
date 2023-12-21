@@ -52,6 +52,7 @@ import lisa.mathematics.settheory.SetTheory.firstInPair
 import lisa.mathematics.settheory.SetTheory.firstInPairReduction
 import lisa.mathematics.settheory.SetTheory.secondInPair
 import lisa.mathematics.settheory.SetTheory.productWithEmptySetEmpty
+import lisa.mathematics.settheory.SetTheory.setWithNoElementsIsEmpty
 import lisa.mathematics.settheory.SetTheory.setUnion
 import lisa.mathematics.settheory.orderings.Ordinals.ordinal
 import lisa.mathematics.settheory.orderings.WellOrders.wellOrder
@@ -90,22 +91,6 @@ object AxiomOfChoice extends lisa.Main {
   private val Q = predicate[1]
 
   val pairwiseDisjoint = DEF(A) --> { forall(x, forall(y, in(x, A) /\ in(y, A) ==> ((!(setIntersection(x, y) === emptySet)) ==> (x === y)))) }
-
-  val imageUniqueness = Theorem(
-    ∃!(g, ∀(t, in(t, g) <=> in(t, relationRange(r)) /\ exists(x, in(x, A) /\ in(pair(x, t), r))))
-  ) {
-    have(∃!(g, ∀(t, in(t, g) <=> in(t, relationRange(r)) /\ exists(x, in(x, A) /\ in(pair(x, t), r))))) by UniqueComprehension(
-      relationRange(r),
-      lambda((t, b), exists(x, in(x, A) /\ in(pair(x, t), r)))
-    )
-  }
-
-  // // [[https://isabelle.in.tum.de/dist/library/FOL/ZF/ZF_Base.html#ZF_Base.Image|const]]
-  val image = DEF(r, A) --> The(g, forall(t, in(t, g) <=> in(t, relationRange(r)) /\ exists(x, in(x, A) /\ in(pair(x, t), r))))(imageUniqueness)
-
-  // // [[https://isabelle.in.tum.de/dist/library/FOL/ZF/ZF_Base.html#apply]]
-  // TODO: not sure about singleton
-  val apply = DEF(f, a) --> union(image(f, singleton(a)))
 
   val identityFunctionUniqueness = Theorem(
     ∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(x, x)) /\ exists(y, in(y, x) /\ (t === pair(y, y)))))
@@ -292,11 +277,6 @@ object AxiomOfChoice extends lisa.Main {
     thenHave(subset(f, Sigma(A, B))) by Tautology
   }
 
-  // val setUnionMembership = Theorem(
-  //   in(z, setUnion(x, y)) <=> (in(z, x) \/ in(z, y))
-  // val restrictedFunction = DEF(f, x) --> The(g, ∀(t, in(t, g)
-  // <=> (in(t, f) /\ ∃(y, ∃(z, in(y, x) /\ (t === pair(y, z)))))))(restrictedFunctionUniqueness)
-
   // Rovelli Gianmaria
   val domainType = Lemma(in(pair(a, b), f) /\ in(f, Pi(A, B)) |- in(a, A)) {
     assume(in(pair(a, b), f))
@@ -332,7 +312,6 @@ object AxiomOfChoice extends lisa.Main {
     val fwd = thenHave(in(f, powerSet(Sigma(A, B))) /\ (subset(A, relationDomain(f)) /\ functional(f))) by Tautology
 
     val bwd = have(subset(relationDomain(f), A)) subproof {
-
       have(in(z, relationDomain(f)) ==> in(z, A)) subproof {
         assume(in(z, relationDomain(f)))
         assume(!in(z, A))
@@ -743,7 +722,6 @@ object AxiomOfChoice extends lisa.Main {
   }
 
   val firstOfPairInDomain = Lemma(in(pair(a, b), f) |- in(a, relationDomain(f))) {
-
     assume(in(pair(a, b), f))
     val existsB = thenHave(exists(b, in(pair(a, b), f))) by RightExists
 
@@ -897,19 +875,6 @@ object AxiomOfChoice extends lisa.Main {
     ) by RightForall(sub1)
   }
 
-  // Rovelli Gianmaria
-  val iffElimination = Lemma(
-    (p /\ P(x)) <=> (p /\ P(y)) |- P(x) <=> P(y)
-  ) {
-    assume((p /\ P(x)) <=> (p /\ P(y)))
-    have((p /\ P(x)) ==> (p /\ P(y))) by Tautology
-    val s1 = thenHave(!p \/ !P(x) \/ (p /\ P(y))) by Tautology
-    have((p /\ P(y)) ==> (p /\ P(x))) by Tautology
-    val s2 = thenHave(!p \/ !P(y) \/ (p /\ P(x))) by Tautology
-
-    sorry
-  }
-
   val cartesianProductWithIdentityUniqueness = Theorem(
     existsOne(g, forall(t, in(t, g) <=> (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))))
   ) {
@@ -922,10 +887,27 @@ object AxiomOfChoice extends lisa.Main {
   // The(g, forall(t, in(t, g) <=> (in(firstInPair(t), A) /\ (secondInPair(t) === singleton(firstInPair(t))))))(cartesianProductWithIdentityUniqueness)
 
   // Rovelli Gianmaria
+  val elementInNonEmptySet = Lemma(!(x === emptySet) |- exists(y, in(y, x))) {
+    have(forall(y, !in(y, x)) |- (x === emptySet)) by Tautology.from(setWithNoElementsIsEmpty)
+    thenHave(!(x === emptySet) |- !forall(y, !in(y, x))) by Tautology
+    thenHave(!(x === emptySet) |- exists(y, in(y, x))) by Tautology
+  }
+
+  // Rovelli Gianmaria
+  val elementInNonEmptySetIsNotEmptySet = Lemma(!in(emptySet, A) /\ in(b, A) |- !(b === emptySet)) {
+    val subs = assume(b === emptySet)
+    thenHave(!in(emptySet, A) /\ in(b, A) |- in(b, A)) by Restate
+    thenHave(!in(emptySet, A) /\ in(b, A) |- in(emptySet, A)) by Substitution.ApplyRules(subs)
+    thenHave(!in(emptySet, A) /\ in(b, A) |- ()) by Tautology
+    thenHave(!in(emptySet, A) /\ in(b, A) |- !(b === emptySet)) by Weakening
+  }
+
+  // Rovelli Gianmaria
   val cartesianProductEquality = Lemma(
-    (cartesianProduct(x, A) === cartesianProduct(x, B)) ==> (A === B)
+    (!(x === emptySet) /\ (cartesianProduct(x, A) === cartesianProduct(x, B))) ==> (A === B)
   ) {
-    assume((cartesianProduct(x, A) === cartesianProduct(x, B)))
+    assume(cartesianProduct(x, A) === cartesianProduct(x, B))
+    assume(!(x === emptySet))
     have(
       forall(z, in(z, cartesianProduct(x, A)) <=> in(z, cartesianProduct(x, B)))
         <=> (cartesianProduct(x, A) === cartesianProduct(x, B))
@@ -934,20 +916,35 @@ object AxiomOfChoice extends lisa.Main {
       forall(z, in(z, cartesianProduct(x, A)) <=> in(z, cartesianProduct(x, B)))
     ) by Tautology
     val ss1 = thenHave(
-      (in(pair(a, b), cartesianProduct(x, A)) <=> in(pair(a, b), cartesianProduct(x, B)))
-    ) by InstantiateForall(pair(a, b))
+      (in(pair(a, t), cartesianProduct(x, A)) <=> in(pair(a, t), cartesianProduct(x, B)))
+    ) by InstantiateForall(pair(a, t))
 
-    val ss2 = have((in(pair(a, b), cartesianProduct(x, A)) <=> in(a, x) /\ in(b, A))) by Tautology.from(pairInCartesianProduct of (y -> A))
-    val ss3 = have((in(pair(a, b), cartesianProduct(x, B)) <=> in(a, x) /\ in(b, B))) by Tautology.from(pairInCartesianProduct of (y -> B))
+    val fwd = have(in(t, A) ==> in(t, B)) subproof {
+      assume(in(t, A))
+      val ex = have(exists(a, in(a, x))) by Tautology.from(elementInNonEmptySet)
+      have(in(a, x) |- in(pair(a, t), cartesianProduct(x, A))) by Tautology.from(pairInCartesianProduct of (b -> t, y -> A))
+      have(in(a, x) |- in(pair(a, t), cartesianProduct(x, B))) by Tautology.from(lastStep, ss1)
+      have(in(a, x) |- in(a, x) /\ in(t, B)) by Tautology.from(lastStep, pairInCartesianProduct of (b -> t, y -> B))
+      thenHave(in(a, x) |- in(t, B)) by Tautology
+      thenHave(exists(a, in(a, x)) |- in(t, B)) by LeftExists
+      have(in(t, B)) by Tautology.from(lastStep, ex)
+    }
+    val bwd = have(in(t, B) ==> in(t, A)) subproof {
+      assume(in(t, B))
+      val ex = have(exists(a, in(a, x))) by Tautology.from(elementInNonEmptySet)
+      have(in(a, x) |- in(pair(a, t), cartesianProduct(x, B))) by Tautology.from(pairInCartesianProduct of (b -> t, y -> B))
+      have(in(a, x) |- in(pair(a, t), cartesianProduct(x, A))) by Tautology.from(lastStep, ss1)
+      have(in(a, x) |- in(a, x) /\ in(t, A)) by Tautology.from(lastStep, pairInCartesianProduct of (b -> t, y -> A))
+      thenHave(in(a, x) |- in(t, A)) by Tautology
+      thenHave(exists(a, in(a, x)) |- in(t, A)) by LeftExists
+      have(in(t, A)) by Tautology.from(lastStep, ex)
+    }
+    have(in(t, A) <=> in(t, B)) by Tautology.from(fwd, bwd)
+    thenHave(forall(t, in(t, A) <=> in(t, B))) by RightForall
 
     have(
-      in(a, x) /\ in(b, A) <=> in(a, x) /\ in(b, B)
-    ) by Tautology.from(ss1, ss2, ss3)
-    have(
-      in(b, A) <=> in(b, B)
-    ) by Tautology.from(lastStep, iffElimination of (p -> in(a, x), P -> lambda(X, in(b, X)), x -> A, y -> B))
-    thenHave(forall(b, in(b, A) <=> in(b, B))) by RightForall
-    have(A === B) by Tautology.from(lastStep, extensionalityAxiom of (x -> A, y -> B))
+      (A === B)
+    ) by Tautology.from(lastStep, extensionalityAxiom of (x -> A, y -> B))
   }
 
   // Rovelli Gianmaria
@@ -975,6 +972,8 @@ object AxiomOfChoice extends lisa.Main {
       assume(in(b, A))
       val s = assume(emptySet === cartesianProduct(b, singleton(b)))
 
+      val bNotEmptySet = have(!(b === emptySet)) by Tautology.from(elementInNonEmptySetIsNotEmptySet)
+
       val ss1 = have(
         (cartesianProduct(b, emptySet) === emptySet) /\ (cartesianProduct(emptySet, b) === emptySet)
       ) by Tautology.from(s2)
@@ -983,7 +982,7 @@ object AxiomOfChoice extends lisa.Main {
       ) by Substitution.ApplyRules(s)
       val ss3 = have(cartesianProduct(emptySet, b) === emptySet) by Tautology.from(ss2)
       val ss4 = have((cartesianProduct(b, emptySet) === cartesianProduct(b, singleton(b)))) by Tautology.from(ss2)
-      have(emptySet === singleton(b)) by Tautology.from(lastStep, cartesianProductEquality of (x -> b, A -> emptySet, B -> singleton(b)))
+      have(emptySet === singleton(b)) by Tautology.from(lastStep, bNotEmptySet, cartesianProductEquality of (x -> b, A -> emptySet, B -> singleton(b)))
 
       have(in(b, A) /\ (emptySet === cartesianProduct(b, singleton(b))) |- ()) by Tautology.from(lastStep, singletonNonEmpty of (x -> b))
       thenHave(
