@@ -1368,6 +1368,7 @@ object SetTheory extends lisa.Main {
    * @param x set
    * @param y set
    */
+  // Ref : https://math.stackexchange.com/questions/2109593/cartesian-products-and-power-sets
   val cartesianProduct =
     DEF(x, y) --> The(z, ∀(t, in(t, z) <=> (in(t, powerSet(powerSet(setUnion(x, y)))) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ in(a, x) /\ in(b, y))))))(cartesianProductUniqueness)
 
@@ -2818,8 +2819,21 @@ object SetTheory extends lisa.Main {
    *
    * TODO: explain
    */
-  // val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
-  val Sigma = DEF(x, f) --> restrictedFunction(f, x)
+  // // val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
+  // val Sigma = DEF(x, f) --> restrictedFunction(f, x)
+  // val Sigma = DEF(x, f) --> restrictedFunction(f, x)
+  val SigmaUniqueness = Theorem(
+    ∃!(z, ∀(t, in(t, z) <=> (/*in(t, powerSet(powerSet(setUnion(x, f)))) /\*/ ∃(a, ∃(b, (t === pair(a, b)) /\ in(a, x) /\ in(b, app(f, a)))))))
+  ) {
+    sorry
+    // have(thesis) by UniqueComprehension(
+    //   powerSet(powerSet(setUnion(x, f))),
+    //   lambda((t, z), ∃(a, ∃(b, (t === pair(a, b)) /\ in(a, x) /\ in(b, app(f, a)))))
+    // )
+  }
+
+  val Sigma = /* ignored for the moment */
+    DEF(x, f) --> The(z, ∀(t, in(t, z) <=> (/* in(t, powerSet(powerSet(setUnion(x, f)))) /\*/ ∃(a, ∃(b, (t === pair(a, b)) /\ in(a, x) /\ in(b, app(f, a)))))))(SigmaUniqueness)
 
   val piUniqueness = Theorem(
     ∃!(z, ∀(g, in(g, z) <=> (in(g, powerSet(Sigma(x, f))) /\ (subset(x, relationDomain(g)) /\ functional(g)))))
