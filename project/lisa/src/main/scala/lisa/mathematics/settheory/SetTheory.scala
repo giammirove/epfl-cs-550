@@ -1368,7 +1368,6 @@ object SetTheory extends lisa.Main {
    * @param x set
    * @param y set
    */
-  // Ref : https://math.stackexchange.com/questions/2109593/cartesian-products-and-power-sets
   val cartesianProduct =
     DEF(x, y) --> The(z, ∀(t, in(t, z) <=> (in(t, powerSet(powerSet(setUnion(x, y)))) /\ ∃(a, ∃(b, (t === pair(a, b)) /\ in(a, x) /\ in(b, y))))))(cartesianProductUniqueness)
 
@@ -2819,7 +2818,7 @@ object SetTheory extends lisa.Main {
    *
    * TODO: explain
    */
-  // // val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
+  // val Sigma = DEF(x, f) --> union(restrictedFunction(f, x))
   // val Sigma = DEF(x, f) --> restrictedFunction(f, x)
   // val Sigma = DEF(x, f) --> restrictedFunction(f, x)
   val SigmaUniqueness = Theorem(

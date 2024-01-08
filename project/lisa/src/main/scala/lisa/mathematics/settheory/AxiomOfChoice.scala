@@ -75,6 +75,7 @@ object AxiomOfChoice extends lisa.Main {
   private val q = formulaVariable
   private val r = variable
   private val t = variable
+  private val w = variable
   private val x = variable
   private val y = variable
   private val z = variable
@@ -896,15 +897,17 @@ object AxiomOfChoice extends lisa.Main {
   }
 
   val cartesianProductWithIdentityUniqueness = Theorem(
-    existsOne(g, forall(t, in(t, g) <=> (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))))
+    existsOne(g, forall(t, in(t, g) <=> in(t, powerSet(cartesianProduct(union(A), A))) /\ (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))))
   ) {
-    sorry
+    have(thesis) by UniqueComprehension(
+      powerSet(cartesianProduct(union(A), A)),
+      lambda((t, c), (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b))))))
+    )
   }
 
-  // union of all elements like {B*{B}. B ∈ A}
+  // all elements like {B*{B}. B ∈ A}
   val cartesianProductWithIdentity = DEF(A) -->
-    The(g, forall(t, in(t, g) <=> (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))))(cartesianProductWithIdentityUniqueness)
-  // The(g, forall(t, in(t, g) <=> (in(firstInPair(t), A) /\ (secondInPair(t) === singleton(firstInPair(t))))))(cartesianProductWithIdentityUniqueness)
+    The(g, forall(t, in(t, g) <=> in(t, powerSet(cartesianProduct(union(A), A))) /\ (exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))))(cartesianProductWithIdentityUniqueness)
 
   // Rovelli Gianmaria
   val elementInNonEmptySet = Lemma(!(x === emptySet) |- exists(y, in(y, x))) {
@@ -975,10 +978,14 @@ object AxiomOfChoice extends lisa.Main {
 
     // towards contradiction
     assume(in(emptySet, cartesianProductWithIdentity(A)))
-    have(forall(t, in(t, cartesianProductWithIdentity(A)) <=> exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))) by InstantiateForall(cartesianProductWithIdentity(A))(
+    have(forall(t, in(t, cartesianProductWithIdentity(A)) <=> in(t, powerSet(cartesianProduct(union(A), A))) /\ exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))) by InstantiateForall(
+      cartesianProductWithIdentity(A)
+    )(
       cartesianProductWithIdentity.definition
     )
-    thenHave(in(emptySet, cartesianProductWithIdentity(A)) <=> exists(b, in(b, A) /\ (emptySet === cartesianProduct(b, singleton(b))))) by InstantiateForall(emptySet)
+    thenHave(
+      in(emptySet, cartesianProductWithIdentity(A)) <=> in(emptySet, powerSet(cartesianProduct(union(A), A))) /\ exists(b, in(b, A) /\ (emptySet === cartesianProduct(b, singleton(b))))
+    ) by InstantiateForall(emptySet)
     val s1 = thenHave(exists(b, in(b, A) /\ (emptySet === cartesianProduct(b, singleton(b))))) by Tautology
     val s2 = have(
       ()
@@ -1019,7 +1026,7 @@ object AxiomOfChoice extends lisa.Main {
   }
 
   // Rovelli Gianmaria
-  // the iff version holds too
+  // the iff version should hold too
   val singletonIsIntersection = Lemma(
     setIntersection(A, B) === singleton(x) |- in(x, setIntersection(A, B))
   ) {
@@ -1051,22 +1058,10 @@ object AxiomOfChoice extends lisa.Main {
     assume(in(X, A))
 
     val inCart = have(in(y, cartesianProduct(X, singleton(X)))) subproof {
-      // val setIntersectionMembership = Theorem(
-      //   in(t, setIntersection(x, y)) <=> (in(t, x) /\ in(t, y))
-
-      // val setIntersectionMembership = Theorem(
-      //   in(t, setIntersection(x, y)) <=> (in(t, x) /\ in(t, y))
-
       have(forall(z, in(z, intt) <=> in(z, singleton(y))) <=> (intt === singleton(y))) by Tautology.from(extensionalityAxiom of (x -> intt, y -> singleton(y)))
       thenHave(forall(z, in(z, intt) <=> in(z, singleton(y)))) by Tautology
       thenHave(in(z, intt) <=> in(z, singleton(y))) by InstantiateForall(z)
       have(in(z, intt) <=> (y === z)) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> z, x -> y))
-      // in(y, singleton(x)) <=> (x === y)
-      // val s1 = have(b === X) by Tautology.from(singletonHasNoExtraElements of (x -> X, y -> b))
-      // val pairInCartesianProduct = Theorem(
-      //   in(pair(a, b), cartesianProduct(x, y)) <=> (in(a, x) /\ in(b, y))
-
-      // val singletonEqualityImpliesInclusion = Lemma((A === singleton(y)) |- in(y, A)) {
       have(in(y, intt)) by Tautology.from(singletonEqualityImpliesInclusion of (A -> intt))
       have((in(y, cartesianProduct(X, singleton(X))) /\ in(y, C))) by Tautology.from(lastStep, setIntersectionMembership of (t -> y, x -> cartesianProduct(X, singleton(X)), y -> C))
       thenHave(in(y, cartesianProduct(X, singleton(X)))) by Tautology
@@ -1115,6 +1110,7 @@ object AxiomOfChoice extends lisa.Main {
     thenHave(in(AC2AC1aux2The(X, C), cartesianProduct(X, A))) by Substitution.ApplyRules(subs)
   }
 
+  // Rovelli Gianmaria
   val firstElementOfAC2AC1aux2TheUniqueness = Theorem(
     ∃!(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(A, union(A))) /\ exists(x, in(x, A) /\ (t === pair(x, firstInPair(AC2AC1aux2The(x, C)))))))
   ) {
@@ -1124,7 +1120,6 @@ object AxiomOfChoice extends lisa.Main {
     )
   }
   val firstElementOfAC2AC1aux2The = DEF(A, C) -->
-    // The(g, ∀(t, in(t, g) <=> exists(x, in(x, A) /\ (t === firstInPair(AC2AC1aux2The(x, C))))))(firstElementOfAC2AC1aux2TheUniqueness)
     The(g, ∀(t, in(t, g) <=> in(t, cartesianProduct(A, union(A))) /\ exists(x, in(x, A) /\ (t === pair(x, firstInPair(AC2AC1aux2The(x, C)))))))(firstElementOfAC2AC1aux2TheUniqueness)
 
   // Rovelli Gianmaria
@@ -1488,6 +1483,322 @@ object AxiomOfChoice extends lisa.Main {
   }
 
   // Rovelli Gianmaria
+  val cartWithIdIsPairwiseDisjoint = Lemma(pairwiseDisjoint(cartesianProductWithIdentity(A))) {
+    val cartWithId = cartesianProductWithIdentity(A)
+    val pairDisjDef = have(pairwiseDisjoint(cartWithId) <=> forall(B, forall(C, in(B, cartWithId) /\ in(C, cartWithId) ==> ((!(setIntersection(B, C) === emptySet)) ==> (B === C))))) by Tautology.from(
+      pairwiseDisjoint.definition of (A -> cartWithId)
+    )
+
+    have(in(B, cartWithId) /\ in(C, cartWithId) ==> ((!(setIntersection(B, C) === emptySet)) ==> (B === C))) subproof {
+      assume(in(B, cartWithId))
+      assume(in(C, cartWithId))
+      assume(!(setIntersection(B, C) === emptySet))
+
+      have(!(forall(w, in(w, setIntersection(B, C)) <=> in(w, emptySet)))) by Tautology.from(extensionalityAxiom of (x -> setIntersection(B, C), y -> emptySet))
+      val exw = thenHave(exists(w, (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C))))) by Tautology
+
+      have(
+        (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C)))
+          |- in(w, setIntersection(B, C))
+      ) by Tautology.from(emptySetAxiom of (x -> w))
+      val tzBC = have(
+        (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C)))
+          |- in(w, B) /\ in(w, C)
+      ) by Tautology.from(lastStep, setIntersectionMembership of (t -> w, x -> B, y -> C))
+
+      val cartIdDef = have(
+        forall(t, in(t, cartesianProductWithIdentity(A)) <=> in(t, powerSet(cartesianProduct(union(A), A))) /\ exists(b, in(b, A) /\ (t === cartesianProduct(b, singleton(b)))))
+      ) by InstantiateForall(
+        cartesianProductWithIdentity(A)
+      )(
+        cartesianProductWithIdentity.definition
+      )
+      have(
+        in(B, cartesianProductWithIdentity(A)) <=> in(B, powerSet(cartesianProduct(union(A), A))) /\ exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b))))
+      ) by InstantiateForall(B)(cartIdDef)
+      val exb = thenHave(
+        exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b))))
+      ) by Tautology
+
+      have(
+        in(C, cartesianProductWithIdentity(A)) <=> in(C, powerSet(cartesianProduct(union(A), A))) /\ exists(b, in(b, A) /\ (C === cartesianProduct(b, singleton(b))))
+      ) by InstantiateForall(C)(cartIdDef)
+      val exc = thenHave(
+        exists(c, in(c, A) /\ (C === cartesianProduct(c, singleton(c))))
+      ) by Tautology
+
+      val xyBC = have(
+        in(b, A) /\ (B === cartesianProduct(b, singleton(b))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c)))
+          /\ in(w, B) /\ in(w, C)
+          |- in(d, B) <=> in(d, C)
+      ) subproof {
+        assume(in(b, A))
+        val subsB = assume((B === cartesianProduct(b, singleton(b))))
+        assume(in(c, A))
+        val subsC = assume((C === cartesianProduct(c, singleton(c))))
+
+        have(
+          forall(
+            w,
+            in(w, cartesianProduct(b, singleton(b)))
+              <=> ((in(w, powerSet(powerSet(setUnion(b, singleton(b)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b))))))
+          )
+        ) by InstantiateForall(cartesianProduct(b, singleton(b)))(cartesianProduct.definition of (x -> b, y -> singleton(b)))
+        val wDefB = thenHave(
+          in(w, cartesianProduct(b, singleton(b)))
+            <=> ((in(w, powerSet(powerSet(setUnion(b, singleton(b)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b))))))
+        ) by InstantiateForall(w)
+        have(
+          forall(
+            w,
+            in(w, cartesianProduct(c, singleton(c)))
+              <=> ((in(w, powerSet(powerSet(setUnion(c, singleton(c)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, c) /\ in(z, singleton(c))))))
+          )
+        ) by InstantiateForall(cartesianProduct(c, singleton(c)))(cartesianProduct.definition of (x -> c, y -> singleton(c)))
+        val wDefC = thenHave(
+          in(w, cartesianProduct(c, singleton(c)))
+            <=> ((in(w, powerSet(powerSet(setUnion(c, singleton(c)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, c) /\ in(z, singleton(c))))))
+        ) by InstantiateForall(w)
+
+        // B
+        assume(in(w, B))
+        thenHave(in(w, cartesianProduct(b, singleton(b)))) by Substitution.ApplyRules(subsB)
+        val etzB = have(∃(t, ∃(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b))))) by Tautology.from(lastStep, wDefB)
+
+        have((w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) |- in(z, singleton(b))) by Tautology
+        val zb = have((w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) |- z === b) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> z, x -> b))
+
+        // C
+        assume(in(w, C))
+        thenHave(in(w, cartesianProduct(c, singleton(c)))) by Substitution.ApplyRules(subsC)
+        val efgC = have(∃(f, ∃(g, (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c))))) by Tautology.from(lastStep, wDefC)
+
+        have((w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |- in(g, singleton(c))) by Tautology
+        val gc = have((w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |- g === c) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> g, x -> c))
+
+        val subsp = have((w === pair(t, z)) /\ (w === pair(f, g)) |- w === pair(t, z)) by Restate
+        have((w === pair(t, z)) /\ (w === pair(f, g)) |- w === pair(f, g)) by Restate
+        thenHave((w === pair(t, z)) /\ (w === pair(f, g)) |- pair(t, z) === pair(f, g)) by Substitution.ApplyRules(subsp)
+        val zg = have((w === pair(t, z)) /\ (w === pair(f, g)) |- z === g) by Tautology.from(lastStep, pairExtensionality of (a -> t, b -> z, c -> f, d -> g))
+
+        have(
+          (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) /\
+            (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |-
+            z === b
+        ) by Tautology.from(zb)
+        thenHave(
+          (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) /\
+            (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |-
+            g === b
+        ) by Substitution.ApplyRules(zg)
+        thenHave(
+          (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) /\
+            (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |-
+            c === b
+        ) by Substitution.ApplyRules(gc)
+        thenHave(
+          exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) /\ (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c))) |-
+            c === b
+        ) by LeftExists
+        thenHave(
+          exists(t, exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)) /\ (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)))) |-
+            c === b
+        ) by LeftExists
+        thenHave(
+          exists(t, exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)))) /\ (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)) |-
+            c === b
+        ) by Tableau
+        thenHave(
+          exists(g, exists(t, exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)))) /\ (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c))) |-
+            c === b
+        ) by LeftExists
+        thenHave(
+          exists(f, exists(g, exists(t, exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b)))) /\ (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c)))) |-
+            c === b
+        ) by LeftExists
+        thenHave(
+          exists(t, exists(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b))))
+            /\
+              exists(f, exists(g, (w === pair(f, g)) /\ in(f, c) /\ in(g, singleton(c))))
+              |-
+              c === b
+        ) by Tableau
+
+        val bc = have(b === c) by Tautology.from(lastStep, etzB, efgC)
+
+        val fwd = have(
+          in(b, A) /\ (B === cartesianProduct(b, singleton(b))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c)))
+            /\ in(w, B) /\ in(w, C)
+            |- in(d, B) ==> in(d, C)
+        ) subproof {
+          have(
+            forall(
+              w,
+              in(w, cartesianProduct(b, singleton(b)))
+                <=> ((in(w, powerSet(powerSet(setUnion(b, singleton(b)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, b) /\ in(z, singleton(b))))))
+            )
+          ) by InstantiateForall(cartesianProduct(b, singleton(b)))(cartesianProduct.definition of (x -> b, y -> singleton(b)))
+          val wDefBd = thenHave(
+            in(d, cartesianProduct(b, singleton(b)))
+              <=> ((in(d, powerSet(powerSet(setUnion(b, singleton(b)))))) /\ (∃(x, ∃(y, (d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b))))))
+          ) by InstantiateForall(d)
+
+          // B
+          assume(in(d, B))
+          thenHave(in(d, cartesianProduct(b, singleton(b)))) by Substitution.ApplyRules(subsB)
+          val exyB = have(∃(x, ∃(y, (d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b))))) by Tautology.from(lastStep, wDefBd)
+
+          have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(y, singleton(b))) by Tautology
+          val zb = have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- y === b) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> y, x -> b))
+          thenHave((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- y === c) by Substitution.ApplyRules(bc)
+          val yc = have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(y, singleton(c))) by Tautology.from(lastStep, singletonHasNoExtraElements of (x -> c))
+
+          // i need in(x, c)
+          have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(x, b)) by Restate
+          val xc = thenHave((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(x, c)) by Substitution.ApplyRules(bc)
+
+          val subsd = have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- d === pair(x, y)) by Restate
+
+          have((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(pair(x, y), cartesianProduct(c, singleton(c)))) by Tautology.from(
+            yc,
+            xc,
+            pairInCartesianProduct of (a -> x, b -> y, x -> c, y -> singleton(c))
+          )
+          thenHave((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(pair(x, y), C)) by Substitution.ApplyRules(subsC)
+          thenHave((d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)) |- in(d, C)) by Substitution.ApplyRules(subsd)
+          thenHave(exists(y, (d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b))) |- in(d, C)) by LeftExists
+          thenHave(exists(x, exists(y, (d === pair(x, y)) /\ in(x, b) /\ in(y, singleton(b)))) |- in(d, C)) by LeftExists
+          have(in(d, C)) by Tautology.from(lastStep, exyB)
+        }
+
+        val bwd = have(
+          in(b, A) /\ (B === cartesianProduct(b, singleton(b))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c)))
+            /\ in(w, B) /\ in(w, C)
+            |- in(d, C) ==> in(d, B)
+        ) subproof {
+          have(
+            forall(
+              w,
+              in(w, cartesianProduct(c, singleton(c)))
+                <=> ((in(w, powerSet(powerSet(setUnion(c, singleton(c)))))) /\ (∃(t, ∃(z, (w === pair(t, z)) /\ in(t, c) /\ in(z, singleton(c))))))
+            )
+          ) by InstantiateForall(cartesianProduct(c, singleton(c)))(cartesianProduct.definition of (x -> c, y -> singleton(c)))
+          val wDefBc = thenHave(
+            in(d, cartesianProduct(c, singleton(c)))
+              <=> ((in(d, powerSet(powerSet(setUnion(c, singleton(c)))))) /\ (∃(x, ∃(y, (d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c))))))
+          ) by InstantiateForall(d)
+
+          // C
+          assume(in(d, C))
+          thenHave(in(d, cartesianProduct(c, singleton(c)))) by Substitution.ApplyRules(subsC)
+          val exyB = have(∃(x, ∃(y, (d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c))))) by Tautology.from(lastStep, wDefBc)
+
+          have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(y, singleton(c))) by Tautology
+          val zc = have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- y === c) by Tautology.from(lastStep, singletonHasNoExtraElements of (y -> y, x -> c))
+          thenHave((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- y === b) by Substitution.ApplyRules(bc)
+          val yb = have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(y, singleton(b))) by Tautology.from(lastStep, singletonHasNoExtraElements of (x -> b))
+
+          // i need in(x, b)
+          have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(x, c)) by Restate
+          val xb = thenHave((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(x, b)) by Substitution.ApplyRules(bc)
+
+          val subsd = have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- d === pair(x, y)) by Restate
+
+          have((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(pair(x, y), cartesianProduct(b, singleton(b)))) by Tautology.from(
+            yb,
+            xb,
+            pairInCartesianProduct of (a -> x, b -> y, x -> b, y -> singleton(b))
+          )
+          thenHave((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(pair(x, y), B)) by Substitution.ApplyRules(subsB)
+          thenHave((d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)) |- in(d, B)) by Substitution.ApplyRules(subsd)
+          thenHave(exists(y, (d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c))) |- in(d, B)) by LeftExists
+          thenHave(exists(x, exists(y, (d === pair(x, y)) /\ in(x, c) /\ in(y, singleton(c)))) |- in(d, B)) by LeftExists
+          have(in(d, B)) by Tautology.from(lastStep, exyB)
+        }
+        have(thesis) by Tautology.from(fwd, bwd)
+      }
+
+      have(
+        in(b, A) /\ (B === cartesianProduct(b, singleton(b))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c))) /\ (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(
+          w,
+          setIntersection(B, C)
+        ))
+          |- in(d, B) <=> in(d, C)
+      ) by Tautology.from(tzBC, lastStep)
+      thenHave(
+        exists(
+          b,
+          in(b, A) /\ (B === cartesianProduct(b, singleton(b))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c))) /\ (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(
+            w,
+            emptySet
+          ) /\ !in(w, setIntersection(B, C)))
+        )
+          |- in(d, B) <=> in(d, C)
+      ) by LeftExists
+      thenHave(
+        exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b)))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c))) /\ (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(
+          w,
+          emptySet
+        ) /\ !in(w, setIntersection(B, C)))
+          |- in(d, B) <=> in(d, C)
+      ) by Tableau
+      thenHave(
+        exists(
+          c,
+          exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b)))) /\ in(c, A) /\ (C === cartesianProduct(c, singleton(c))) /\ (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(
+            w,
+            emptySet
+          ) /\ !in(w, setIntersection(B, C)))
+        )
+          |- in(d, B) <=> in(d, C)
+      ) by LeftExists
+      thenHave(
+        exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b))))
+          /\
+            exists(c, in(c, A) /\ (C === cartesianProduct(c, singleton(c))))
+            /\
+            (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C)))
+
+            |- in(d, B) <=> in(d, C)
+      ) by Tableau
+      thenHave(
+        exists(
+          w,
+          exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b))))
+            /\
+              exists(c, in(c, A) /\ (C === cartesianProduct(c, singleton(c))))
+              /\
+              (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C)))
+        )
+          |- in(d, B) <=> in(d, C)
+      ) by LeftExists
+      thenHave(
+        exists(b, in(b, A) /\ (B === cartesianProduct(b, singleton(b))))
+          /\
+            exists(c, in(c, A) /\ (C === cartesianProduct(c, singleton(c))))
+            /\
+            exists(
+              w,
+              (in(w, setIntersection(B, C)) /\ !in(w, emptySet)) \/ (in(w, emptySet) /\ !in(w, setIntersection(B, C)))
+            )
+
+            |- in(d, B) <=> in(d, C)
+      ) by Tableau
+
+      have(
+        in(d, B) <=> in(d, C)
+      ) by Tautology.from(lastStep, exw, exb, exc)
+      thenHave(
+        forall(d, in(d, B) <=> in(d, C))
+      ) by RightForall
+      have(B === C) by Tautology.from(lastStep, extensionalityAxiom of (x -> B, y -> C))
+    }
+    thenHave(forall(C, (in(B, cartWithId) /\ in(C, cartWithId) ==> ((!(setIntersection(B, C) === emptySet)) ==> (B === C))))) by RightForall
+    thenHave(forall(B, forall(C, (in(B, cartWithId) /\ in(C, cartWithId) ==> ((!(setIntersection(B, C) === emptySet)) ==> (B === C)))))) by RightForall
+    have(thesis) by Tautology.from(lastStep, pairDisjDef)
+  }
+
+  // Rovelli Gianmaria
   val AC2AC1 = Lemma(
     forall(
       A,
@@ -1497,6 +1808,7 @@ object AxiomOfChoice extends lisa.Main {
       ==>
         forall(A, !in(emptySet, A) ==> (exists(f, in(f, Pi(A, identityFunction(A))))))
   ) {
+    val cartWithId = cartesianProductWithIdentity(A)
     assume(
       forall(
         A,
@@ -1504,14 +1816,32 @@ object AxiomOfChoice extends lisa.Main {
           ==> exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))
       )
     )
-    thenHave(
-      !in(emptySet, A) /\ pairwiseDisjoint(A)
-        ==> exists(C, forall(B, in(B, A) ==> exists(y, setIntersection(B, C) === singleton(y))))
-    ) by InstantiateForall(A)
+    val hp = thenHave(
+      !in(emptySet, cartWithId) /\ pairwiseDisjoint(cartWithId)
+        ==> exists(C, forall(B, in(B, cartWithId) ==> exists(y, setIntersection(B, C) === singleton(y))))
+    ) by InstantiateForall(cartWithId)
 
     val sub1 = have(!in(emptySet, A) ==> exists(f, in(f, Pi(A, identityFunction(A))))) subproof {
       assume(!in(emptySet, A))
-      sorry
+      val s1 = have(!in(emptySet, cartWithId)) by Tautology.from(AC2AC1aux1)
+      val s2 = have(pairwiseDisjoint(cartWithId)) by Tautology.from(cartWithIdIsPairwiseDisjoint)
+      val s3 = have(exists(C, forall(B, in(B, cartWithId) ==> exists(y, setIntersection(B, C) === singleton(y))))) by Tautology.from(s1, s2, hp)
+
+      have(
+        forall(B, in(B, cartWithId) ==> exists(y, setIntersection(B, C) === singleton(y)))
+          |- in(firstElementOfAC2AC1aux2The(A, C), Pi(A, identityFunction(A)))
+      ) by Tautology.from(AC2AC1aux3)
+      thenHave(
+        forall(B, in(B, cartWithId) ==> exists(y, setIntersection(B, C) === singleton(y)))
+          |- exists(f, in(f, Pi(A, identityFunction(A))))
+      ) by RightExists
+      thenHave(
+        exists(C, forall(B, in(B, cartWithId) ==> exists(y, setIntersection(B, C) === singleton(y))))
+          |- exists(f, in(f, Pi(A, identityFunction(A))))
+      ) by LeftExists
+      have(
+        exists(f, in(f, Pi(A, identityFunction(A))))
+      ) by Tautology.from(lastStep, s3)
     }
 
     have(forall(A, !in(emptySet, A) ==> exists(f, in(f, Pi(A, identityFunction(A)))))) by RightForall(sub1)
